@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>FindGuni</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .letter-container {
+            width: 100%;
+            max-width: 400px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .letter-header {
+            background: #dc3545;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .urgent-badge {
+            background: #fff;
+            color: #dc3545;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: inline-block;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+        
+        .letter-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .letter-content {
+            padding: 30px 25px;
+            line-height: 1.8;
+            color: #2c3e50;
+        }
+        
+        .missing-notice {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .missing-notice h3 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .missing-notice p {
+            margin: 5px 0;
+            color: #856404;
+            font-size: 14px;
+        }
+        
+        .ransom-demand {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .ransom-demand h3 {
+            color: #721c24;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .ransom-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #dc3545;
+            margin: 10px 0;
+        }
+        
+        .instructions {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .instructions h4 {
+            color: #0c5460;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .instructions p {
+            margin: 5px 0;
+            color: #0c5460;
+            font-size: 14px;
+        }
+        
+        .start-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0 10px 0;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .start-button:hover {
+            background: #218838;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .signature {
+            text-align: right;
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        /* 선택지 스타일 */
+        .choices-section {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .choices-section h4 {
+            color: #495057;
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .choice-btn {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            color: #495057;
+            font-family: inherit;
+            font-weight: 500;
+        }
+        
+        .choice-btn:hover {
+            border-color: #6c757d;
+            background: #f8f9fa;
+            transform: translateY(-1px);
+        }
+        
+        .choice-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* 결과 섹션 스타일 */
+        .result-section {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .thinking-message {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        
+        .thinking-message p {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #6c757d;
+            padding: 12px;
+            border-radius: 50%;
+            text-decoration: none;
+            font-size: 18px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .admin-link:hover {
+            background: #6c757d;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        /* 모바일 최적화 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .letter-container {
+                width: 100%;
+            }
+            
+            .letter-header {
+                padding: 15px;
+            }
+            
+            .letter-title {
+                font-size: 20px;
+            }
+            
+            .letter-content {
+                padding: 20px 15px;
+            }
+            
+            .ransom-amount {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="letter-container">
+        <div class="letter-header">
+            <h1 class="letter-title">📜 구니 납치 통지서</h1>
+        </div>
+        
+        <div class="letter-content">
+            <p>오아린, 좋은 아침이다.</p>
+            <p>갑자기 이게 무슨 일인가 당황스럽겠지.</p>            
+            <p>결론부터 말하자면, 너의 사랑스러운 남편을 보호하고 있다.</p>
+            <p>경찰이나 주변에 연락할 생각은.. 안 하는걸 추천하지.</p>
+            <p>요구조건은 간단하다.</p>
+            
+            <div class="ransom-demand">
+                <div class="ransom-amount">뽀뽀 1억번을 가져오도록.</div>
+            </div>
+            <p>이것이 구니를 되찾는 유일한 방법이다.</p>
+            
+            <div class="signature">
+                - 정체불명의 납치범 올림. 그럼 adios
+            </div>
+
+            <!-- 선택지 섹션 -->
+            <div id="choices-section" class="choices-section">
+                <h4>이럴수가.. 뽀뽀 1억번이라니..</h4>
+                <div class="choices">
+                    <button class="choice-btn" onclick="selectChoice(1)">
+                        당장 해줄게!
+                    </button>
+                    <button class="choice-btn" onclick="selectChoice(2)">
+                        헉.. 1억번.. 노력은 해볼게..
+                    </button>
+                    <button class="choice-btn" onclick="selectChoice(3)">
+                        할부는 안되겠니?
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 결과 섹션 -->
+            <div id="result-section" class="result-section" style="display: none;">
+                <div class="thinking-message">
+                    <p>..그러고보니 이건 편지인데 대답을 어떻게 하지?</p>
+                    <p>우선 집안을 수색하면서 구니의 흔적을 찾아보자.</p>
+                    <div class="signature" style="text-align: center; margin-top: 10px; font-size: 12px; color: #adb5bd;">
+                        (tip. 집안 곳곳의 QR코드를 마구마구 찍어보자!)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function selectChoice(choiceNumber) {
+            // 선택지 섹션 숨기기
+            const choicesSection = document.getElementById('choices-section');
+            const resultSection = document.getElementById('result-section');
+            
+            // 선택지에 따른 간단한 피드백 (선택사항)
+            let feedback = '';
+            switch(choiceNumber) {
+                case 1:
+                    feedback = '용감한 선택이네요! 하지만...';
+                    break;
+                case 2:
+                    feedback = '현실적인 판단이군요. 그런데...';
+                    break;
+                case 3:
+                    feedback = '창의적인 발상이에요! 그러나...';
+                    break;
+            }
+            
+            // 잠깐의 피드백 후 결과 표시
+            choicesSection.style.opacity = '0.5';
+            choicesSection.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                choicesSection.style.display = 'none';
+                resultSection.style.display = 'block';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '페이지 추가'">페이지 관리</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .conditional-field {
+            display: none;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .help-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .form-actions {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+    <script>
+        function toggleConditionalFields() {
+            const typeSelect = document.getElementById('type');
+            const choiceFields = document.getElementById('choice-fields');
+            const inputFields = document.getElementById('input-fields');
+            
+            const selectedType = typeSelect.value;
+            
+            choiceFields.style.display = selectedType === 'MULTIPLE_CHOICE' ? 'block' : 'none';
+            inputFields.style.display = selectedType === 'TEXT_INPUT' ? 'block' : 'none';
+        }
+        
+        function previewImage() {
+            const select = document.getElementById('selectedImage');
+            const preview = document.getElementById('imagePreview');
+            const img = document.getElementById('previewImg');
+            
+            if (select.value) {
+                img.src = '/images/' + select.value;
+                preview.style.display = 'block';
+                
+                img.onerror = function() {
+                    preview.style.display = 'none';
+                    alert('이미지를 불러올 수 없습니다. 파일이 존재하는지 확인해주세요.');
+                };
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleConditionalFields();
+            previewImage();
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title" th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '새 페이지 추가'">페이지 관리</h1>
+        
+        <form th:action="@{/admin/pages}" method="post" th:object="${page}">
+            <div class="form-group">
+                <label for="id" class="form-label">페이지 ID *</label>
+                <input type="text" id="id" th:field="*{id}" class="form-input" 
+                       placeholder="예: clue1" required>
+                <div class="help-text">고유한 페이지 식별자입니다. 영문자와 숫자만 사용하세요.</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="title" class="form-label">페이지 제목 *</label>
+                <input type="text" id="title" th:field="*{title}" class="form-input" 
+                       placeholder="예: 🏠 집안 수색" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="selectedImage" class="form-label">이미지 선택</label>
+                <select id="selectedImage" name="selectedImage" class="form-select" onchange="previewImage()">
+                    <option value="">이미지를 선택하세요</option>
+                    <option th:each="image : ${availableImages}" 
+                            th:value="${image}" 
+                            th:text="${image}"
+                            th:selected="${page.imageUrl != null && page.imageUrl.contains(image)}">
+                    </option>
+                </select>
+                <div class="help-text">src/main/resources/static/images 폴더의 이미지를 선택하세요.</div>
+                
+                <div id="imagePreview" class="image-preview" style="display: none;">
+                    <img id="previewImg" src="" alt="미리보기" style="max-width: 200px; max-height: 200px; border-radius: 10px; margin-top: 10px; border: 2px solid #ddd;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="content" class="form-label">페이지 내용 *</label>
+                <textarea id="content" th:field="*{content}" class="form-textarea" 
+                          placeholder="페이지 내용을 입력하세요..." required></textarea>
+                <div class="help-text">줄바꿈은 \n\n으로 구분됩니다.</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="type" class="form-label">페이지 타입 *</label>
+                <select id="type" th:field="*{type}" class="form-select" onchange="toggleConditionalFields()" required>
+                    <option value="">선택하세요</option>
+                    <option th:each="type : ${pageTypes}" 
+                            th:value="${type}" 
+                            th:text="${type.name() == 'STORY_ONLY' ? '스토리 전용' : (type.name() == 'MULTIPLE_CHOICE' ? '선택형 문제' : '주관식 문제')}">
+                    </option>
+                </select>
+            </div>
+            
+            <div id="choice-fields" class="conditional-field">
+                <div class="form-group">
+                    <label for="question" class="form-label">질문</label>
+                    <input type="text" id="question" th:field="*{question}" class="form-input" 
+                           placeholder="예: 어떤 선택을 하시겠습니까?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="choicesText" class="form-label">선택지</label>
+                    <textarea id="choicesText" name="choicesText" class="form-textarea" 
+                              placeholder="각 선택지를 새 줄로 구분하여 입력하세요:&#10;선택지 1&#10;선택지 2&#10;선택지 3"
+                              th:text="${page.choices != null ? #strings.listJoin(page.choices, '&#10;') : ''}"></textarea>
+                    <div class="help-text">각 선택지를 새 줄로 구분하여 입력하세요.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="choiceLinksText" class="form-label">선택지별 링크</label>
+                    <textarea id="choiceLinksText" name="choiceLinksText" class="form-textarea" 
+                              placeholder="선택지:페이지ID 형식으로 입력:&#10;선택지 1:page1&#10;선택지 2:page2"></textarea>
+                    <div class="help-text">선택지:페이지ID 형식으로 각 줄에 하나씩 입력하세요.</div>
+                </div>
+            </div>
+            
+            <div id="input-fields" class="conditional-field">
+                <div class="form-group">
+                    <label for="question2" class="form-label">질문</label>
+                    <input type="text" id="question2" th:field="*{question}" class="form-input" 
+                           placeholder="예: 구니가 가장 좋아하는 숫자는?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="correctAnswer" class="form-label">정답</label>
+                    <input type="text" id="correctAnswer" th:field="*{correctAnswer}" class="form-input" 
+                           placeholder="예: 3">
+                </div>
+                
+                <div class="form-group">
+                    <label for="successPageId" class="form-label">정답 시 이동할 페이지 ID</label>
+                    <input type="text" id="successPageId" th:field="*{successPageId}" class="form-input" 
+                           placeholder="예: clue2">
+                    <div class="help-text">정답을 맞췄을 때 이동할 페이지의 ID를 입력하세요.</div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn">저장</button>
+                <a href="/admin/pages" class="btn btn-secondary">취소</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 코드 생성</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .qr-result {
+            margin-top: 30px;
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .qr-image {
+            margin: 20px 0;
+        }
+        .qr-url {
+            font-size: 14px;
+            color: #666;
+            word-break: break-all;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        .help-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">QR 코드 생성</h1>
+        
+        <div th:if="${error}" class="error" th:text="${error}"></div>
+        
+        <form th:action="@{/qr/generate}" method="post">
+            <div class="form-group">
+                <label for="itemId" class="form-label">아이템 ID</label>
+                <input type="text" id="itemId" name="itemId" class="form-input" 
+                       th:value="${itemId}" placeholder="예: item01" required>
+                <div class="help-text">생성할 QR 코드의 대상 아이템 ID를 입력하세요</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="customUrl" class="form-label">사용자 정의 URL (선택사항)</label>
+                <input type="url" id="customUrl" name="customUrl" class="form-input" 
+                       placeholder="https://example.com/item/item01">
+                <div class="help-text">비워두면 자동으로 현재 도메인의 URL이 사용됩니다</div>
+            </div>
+            
+            <button type="submit" class="btn">QR 코드 생성</button>
+        </form>
+        
+        <div th:if="${qrCodeImage}" class="qr-result">
+            <h3>생성된 QR 코드</h3>
+            <div class="qr-image">
+                <img th:src="${qrCodeImage}" alt="QR 코드" style="max-width: 300px;">
+            </div>
+            <div class="qr-url">
+                <strong>URL:</strong> <span th:text="${qrUrl}"></span>
+            </div>
+            <a th:href="@{'/qr/download/' + ${itemId} + (customUrl=${qrUrl} != (T(org.springframework.web.servlet.support.ServletUriComponentsBuilder).fromCurrentRequest().replacePath('/item/' + ${itemId}).build().toString()) ? ${qrUrl} : null)}" 
+               class="btn btn-secondary" download>
+                PNG 파일로 다운로드
+            </a>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="/" class="btn btn-secondary" style="display: inline-block; width: auto; padding: 8px 20px;">홈으로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
