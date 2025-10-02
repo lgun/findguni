@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title th:text="${page.title}"> 찾아라 구니</title>
+    <title th:text="${page.title}">구니를 구하자!</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -51,10 +51,10 @@
         }
         
         .page-image {
-            width: 100%;
-            max-width: 300px;
-            height: 200px;
-            object-fit: cover;
+            width: 95%;
+            max-width: 380px;
+            height: auto;
+            max-height: 500px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             background: linear-gradient(45deg, #f1f2f6, #ddd);
@@ -64,6 +64,7 @@
             color: #999;
             font-size: 16px;
             margin: 0 auto;
+            min-height: 150px;
         }
         
         .content-section {
@@ -73,13 +74,18 @@
         
         .page-content {
             background: #fff;
-            padding: 20px;
+            padding: 25px;
             border-radius: 10px;
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             border-left: 4px solid #3498db;
-            line-height: 1.7;
+            line-height: 1.8;
             white-space: pre-line;
+            min-height: 150px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            flex-direction: column;
         }
         
         .question-section {
@@ -246,7 +252,10 @@
             }
             
             .page-image {
-                height: 180px;
+                width: 98%;
+                max-width: 350px;
+                max-height: 400px;
+                min-height: 120px;
             }
             
             .content-section {
@@ -254,7 +263,8 @@
             }
             
             .page-content {
-                padding: 15px;
+                padding: 20px;
+                min-height: 120px;
             }
             
             .question-section {
@@ -272,7 +282,7 @@
         <div class="image-section">
             <div class="page-image">
                 <img th:if="${page.imageUrl}" th:src="${page.imageUrl}" th:alt="${page.title}" 
-                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;"
+                     style="width: 100%; height: auto; max-height: 500px; border-radius: 10px; object-fit: contain;"
                      onerror="this.style.display='none'; this.parentElement.innerHTML='🔍<br>단서 이미지'">
                 <span th:unless="${page.imageUrl}">🔍<br>단서 이미지</span>
             </div>
@@ -307,14 +317,23 @@
                 
                 <!-- 오답 표시 -->
                 <div th:if="${isWrong}" class="wrong-answer">
-                    <h4>❌ 틀렸습니다</h4>
-                    <p>다시 한번 생각해보세요. 단서를 자세히 읽어보면 답이 있을거예요!</p>
+                    <h4>❌ 땡!! 틀렸습니다~</h4>
                 </div>
             </div>
             
-            <!-- 스토리 전용 페이지의 계속하기 버튼 -->
-            <div th:if="${page.type.name() == 'STORY_ONLY' && page.id != 'final'}">
-                <a href="/" class="continue-btn">🏠 처음으로 돌아가기</a>
+            <!-- 다음 페이지 버튼 (모든 페이지 타입에서 사용 가능) -->
+            <div th:if="${page.nextPageId != null && !#strings.isEmpty(page.nextPageId)}">
+                <a th:href="@{'/page/' + ${page.nextPageId}}" class="continue-btn" 
+                   th:text="${page.nextButtonText != null && !#strings.isEmpty(page.nextButtonText)} ? ${page.nextButtonText} : '다음으로'">
+                    다음으로
+                </a>
+            </div>
+            
+            <!-- QR 스캔으로 돌아가기 버튼 (모든 페이지에 추가) -->
+            <div style="margin-top: 20px; text-align: center;">
+                <a href="/qr-scan" class="continue-btn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); font-size: 14px; padding: 10px 20px;">
+                    📷 QR 스캔으로 돌아가기
+                </a>
             </div>
             
             <!-- 최종 페이지 -->

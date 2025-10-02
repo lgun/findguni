@@ -112,6 +112,51 @@
         .navigation {
             margin-bottom: 20px;
         }
+        .qr-download-section {
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .qr-download-section h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+            font-size: 18px;
+        }
+        .qr-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .url-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .url-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .btn-download {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-download:hover {
+            background-color: #218838;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -132,6 +177,24 @@
                         샘플 데이터 리셋
                     </button>
                 </form>
+            </div>
+        </div>
+        
+        <!-- QR 코드 다운로드 섹션 -->
+        <div class="qr-download-section" th:unless="${#lists.isEmpty(pages)}">
+            <h3>📱 QR 코드 일괄 다운로드</h3>
+            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
+                모든 페이지의 QR 코드를 생성하여 ZIP 파일로 다운로드할 수 있습니다.
+            </p>
+            <form th:action="@{/admin/pages/qr-codes/download}" method="post" class="qr-form">
+                <input type="text" name="baseUrl" value="https://gunigu.duckdns.org" 
+                       placeholder="베이스 URL을 입력하세요" class="url-input" required>
+                <button type="submit" class="btn-download">
+                    💾 QR 코드 다운로드
+                </button>
+            </form>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                예시: https://gunigu.duckdns.org/page/clue1
             </div>
         </div>
         

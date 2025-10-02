@@ -16,7 +16,10 @@
       "Bash(sudo service:*)",
       "Bash(mysql:*)",
       "Bash(dpkg:*)",
-      "Bash(mvn:*)"
+      "Bash(mvn:*)",
+      "Bash(chmod:*)",
+      "Bash(apt list:*)",
+      "Bash(source ~/.bashrc)"
     ],
     "deny": []
   }

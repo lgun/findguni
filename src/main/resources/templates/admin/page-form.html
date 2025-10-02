@@ -120,6 +120,24 @@
             }
         }
         
+        function prepareFormSubmission() {
+            const typeSelect = document.getElementById('type');
+            const selectedType = typeSelect.value;
+            
+            // 현재 선택된 타입이 아닌 question 필드는 비활성화
+            if (selectedType === 'MULTIPLE_CHOICE') {
+                document.getElementById('question2').disabled = true;
+            } else if (selectedType === 'TEXT_INPUT') {
+                document.getElementById('question').disabled = true;
+            } else {
+                // STORY_ONLY인 경우 둘 다 비활성화
+                document.getElementById('question').disabled = true;
+                document.getElementById('question2').disabled = true;
+            }
+            
+            return true; // 폼 제출 계속
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             toggleConditionalFields();
             previewImage();
@@ -130,7 +148,7 @@
     <div class="container">
         <h1 class="title" th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '새 페이지 추가'">페이지 관리</h1>
         
-        <form th:action="@{/admin/pages}" method="post" th:object="${page}">
+        <form th:action="@{/admin/pages}" method="post" th:object="${page}" onsubmit="prepareFormSubmission()">
             <div class="form-group">
                 <label for="id" class="form-label">페이지 ID *</label>
                 <input type="text" id="id" th:field="*{id}" class="form-input" 
@@ -182,7 +200,7 @@
             <div id="choice-fields" class="conditional-field">
                 <div class="form-group">
                     <label for="question" class="form-label">질문</label>
-                    <input type="text" id="question" th:field="*{question}" class="form-input" 
+                    <input type="text" id="question" name="question" th:value="${page.question}" class="form-input" 
                            placeholder="예: 어떤 선택을 하시겠습니까?">
                 </div>
                 
@@ -195,31 +213,48 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="choiceLinksText" class="form-label">선택지별 링크</label>
+                    <label for="choiceLinksText" class="form-label">선택지별 링크 (페이지 ID만)</label>
                     <textarea id="choiceLinksText" name="choiceLinksText" class="form-textarea" 
-                              placeholder="선택지:페이지ID 형식으로 입력:&#10;선택지 1:page1&#10;선택지 2:page2"></textarea>
-                    <div class="help-text">선택지:페이지ID 형식으로 각 줄에 하나씩 입력하세요.</div>
+                              th:text="${choiceLinksText}"
+                              placeholder="각 선택지에 대응하는 페이지 ID를 순서대로 입력:&#10;page1&#10;page2&#10;page3"></textarea>
+                    <div class="help-text">선택지와 같은 순서로 페이지 ID만 각 줄에 입력하세요.</div>
                 </div>
             </div>
             
             <div id="input-fields" class="conditional-field">
                 <div class="form-group">
                     <label for="question2" class="form-label">질문</label>
-                    <input type="text" id="question2" th:field="*{question}" class="form-input" 
-                           placeholder="예: 구니가 가장 좋아하는 숫자는?">
+                    <input type="text" id="question2" name="question" th:value="${page.question}" class="form-input">
                 </div>
                 
                 <div class="form-group">
                     <label for="correctAnswer" class="form-label">정답</label>
-                    <input type="text" id="correctAnswer" th:field="*{correctAnswer}" class="form-input" 
-                           placeholder="예: 3">
+                    <input type="text" id="correctAnswer" th:field="*{correctAnswer}" class="form-input">
                 </div>
                 
                 <div class="form-group">
                     <label for="successPageId" class="form-label">정답 시 이동할 페이지 ID</label>
-                    <input type="text" id="successPageId" th:field="*{successPageId}" class="form-input" 
-                           placeholder="예: clue2">
+                    <input type="text" id="successPageId" th:field="*{successPageId}" class="form-input">
                     <div class="help-text">정답을 맞췄을 때 이동할 페이지의 ID를 입력하세요.</div>
+                </div>
+            </div>
+            
+            <!-- 다음 페이지 설정 -->
+            <div class="form-group" style="background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #007bff; margin-top: 0;">다음 페이지 설정</h3>
+                
+                <div class="form-group">
+                    <label for="nextPageId" class="form-label">다음 페이지 ID</label>
+                    <input type="text" id="nextPageId" th:field="*{nextPageId}" class="form-input" 
+                           placeholder="예: clue2">
+                    <div class="help-text">이동할 다음 페이지의 ID를 입력하세요. 비워두면 버튼이 표시되지 않습니다.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nextButtonText" class="form-label">버튼 텍스트</label>
+                    <input type="text" id="nextButtonText" th:field="*{nextButtonText}" class="form-input" 
+                           placeholder="예: 이동하기, 다음 단서로">
+                    <div class="help-text">다음 페이지로 이동하는 버튼에 표시될 텍스트입니다.</div>
                 </div>
             </div>
             

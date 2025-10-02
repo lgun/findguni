@@ -42,6 +42,12 @@ public class GamePage {
     @Column(name = "success_page_id")
     private String successPageId; // 정답 시 이동할 페이지 ID
     
+    @Column(name = "next_page_id")
+    private String nextPageId; // 다음 페이지 ID
+    
+    @Column(name = "next_button_text")
+    private String nextButtonText; // 다음 페이지 버튼 텍스트
+    
     public enum PageType {
         STORY_ONLY,      // 스토리만 있는 페이지
         MULTIPLE_CHOICE, // 선택형 문제
@@ -136,5 +142,21 @@ public class GamePage {
     
     public void setSuccessPageId(String successPageId) {
         this.successPageId = successPageId;
+    }
+    
+    public String getNextPageId() {
+        return nextPageId;
+    }
+    
+    public void setNextPageId(String nextPageId) {
+        this.nextPageId = nextPageId;
+    }
+    
+    public String getNextButtonText() {
+        return nextButtonText;
+    }
+    
+    public void setNextButtonText(String nextButtonText) {
+        this.nextButtonText = nextButtonText;
     }
 }

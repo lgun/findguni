@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>findguni</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+        
+        .scanner-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+        
+        .scanner-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .scanner-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .scanner-subtitle {
+            font-size: 14px;
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .scanner-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .scan-instructions {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        .scan-instructions h3 {
+            margin: 0 0 10px 0;
+            color: #e74c3c;
+            font-size: 18px;
+        }
+        
+        .scan-button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+        
+        .scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .scan-button:active {
+            transform: translateY(0);
+        }
+        
+        .scan-button.stop {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .scan-button.stop:hover {
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        #qr-reader {
+            width: 100%;
+            max-width: 300px;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        #scanner-area {
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .scan-result {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #155724;
+            text-align: center;
+            display: none;
+        }
+        
+        .scan-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #721c24;
+            text-align: center;
+            display: none;
+        }
+        
+        .home-button {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .home-button:hover {
+            background: linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%);
+            text-decoration: none;
+            color: white;
+        }
+        
+        /* QR 스캐너 라이브러리 스타일 덮어쓰기 */
+        #qr-reader__dashboard_section {
+            display: none !important;
+        }
+        
+        #qr-reader__header_message {
+            display: none !important;
+        }
+        
+        @media (max-width: 480px) {
+            .scanner-header {
+                padding: 15px;
+            }
+            
+            .scanner-title {
+                font-size: 18px;
+            }
+            
+            .scanner-content {
+                padding: 15px;
+            }
+            
+            .scan-button {
+                font-size: 16px;
+                padding: 12px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div class="scanner-header">
+            <h1 class="scanner-title">📷 구니를 구하자!</h1>
+            <p class="scanner-subtitle">QR코드를 마구 찾아버리자</p>
+        </div>
+        
+        <div class="scanner-content">
+            <button id="start-scan" class="scan-button" onclick="startQRScan()">
+                QR코드 찾았다!
+            </button>
+            
+            <div id="scanner-area">
+                <div id="qr-reader"></div>
+                <button id="stop-scan" class="scan-button stop" onclick="stopQRScan()">
+                    ❌ 스캔 중지
+                </button>
+            </div>
+            
+            <div id="scan-result" class="scan-result"></div>
+            <div id="scan-error" class="scan-error"></div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script>
+        let html5QrcodeScanner;
+        let isScanning = false;
+        
+        function startQRScan() {
+            if (isScanning) return;
+            
+            document.getElementById('start-scan').style.display = 'none';
+            document.getElementById('scanner-area').style.display = 'block';
+            document.getElementById('scan-result').style.display = 'none';
+            document.getElementById('scan-error').style.display = 'none';
+            
+            const config = {
+                fps: 10,
+                qrbox: {
+                    width: 250,
+                    height: 250
+                },
+                aspectRatio: 1.0,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            };
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config, false);
+            
+            html5QrcodeScanner.render(
+                (decodedText, decodedResult) => {
+                    // QR코드 스캔 성공
+                    console.log('QR 스캔 성공:', decodedText);
+                    
+                    document.getElementById('scan-result').innerHTML = 
+                        '✅ QR코드를 찾았습니다!<br>페이지로 이동 중...';
+                    document.getElementById('scan-result').style.display = 'block';
+                    
+                    // 1초 후 페이지 이동
+                    setTimeout(() => {
+                        window.location.href = decodedText;
+                    }, 1000);
+                },
+                (error) => {
+                    // 스캔 실패 (계속 시도)
+                    console.log('스캔 중...', error);
+                }
+            );
+            
+            isScanning = true;
+        }
+        
+        function stopQRScan() {
+            if (!isScanning) return;
+            
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    document.getElementById('start-scan').style.display = 'inline-block';
+                    document.getElementById('scanner-area').style.display = 'none';
+                    isScanning = false;
+                }).catch(err => {
+                    console.error('스캐너 정리 실패:', err);
+                    document.getElementById('start-scan').style.display = 'inline-block';
+                    document.getElementById('scanner-area').style.display = 'none';
+                    isScanning = false;
+                });
+            }
+        }
+        
+        // 페이지 나갈 때 스캐너 정리
+        window.addEventListener('beforeunload', () => {
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.clear();
+            }
+        });
+        
+        // 카메라 권한 에러 처리
+        window.addEventListener('error', (e) => {
+            if (e.message.includes('camera') || e.message.includes('permission')) {
+                document.getElementById('scan-error').innerHTML = 
+                    '❌ 카메라 접근 권한이 필요합니다.<br>브라우저 설정에서 카메라 권한을 허용해주세요.';
+                document.getElementById('scan-error').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

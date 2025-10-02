@@ -11,4 +11,9 @@ public class HomeController {
     public String home(Model model) {
         return "index";
     }
+    
+    @GetMapping("/qr-scan")
+    public String qrScan() {
+        return "qr-scan";
+    }
 }
