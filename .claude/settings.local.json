@@ -12,7 +12,11 @@
       "Bash(sudo apt install:*)",
       "Bash(systemctl status:*)",
       "Bash(service mysql:*)",
-      "Bash(brew services:*)"
+      "Bash(brew services:*)",
+      "Bash(sudo service:*)",
+      "Bash(mysql:*)",
+      "Bash(dpkg:*)",
+      "Bash(mvn:*)"
     ],
     "deny": []
   }
