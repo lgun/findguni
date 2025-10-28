@@ -3,55 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오류</title>
+    <title>🎃 할로윈 저주 - 오류</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b69 25%, #0f0f23 75%, #000000 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255, 165, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 69, 0, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '🦇 🕷️ 🎃 👻 🕸️ 🦇 🕷️ 🎃 👻 🕸️';
+            position: fixed;
+            top: 10px;
+            left: -100%;
+            width: 300%;
+            font-size: 16px;
+            opacity: 0.3;
+            animation: float 25s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
         }
         .error-container {
-            background: white;
+            background: linear-gradient(135deg, #2c1810 0%, #1a1a1a 50%, #4a1a4a 100%);
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(255, 69, 0, 0.3), 0 0 20px rgba(138, 43, 226, 0.2);
             text-align: center;
             max-width: 400px;
+            border: 2px solid rgba(255, 165, 0, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .error-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff4500, #8a2be2, #ff8c00, #9932cc);
+            background-size: 300% 300%;
+            animation: spookyGlow 3s ease-in-out infinite;
+            border-radius: 15px;
+            z-index: -1;
+        }
+        
+        @keyframes spookyGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         .error-icon {
             font-size: 48px;
             margin-bottom: 20px;
+            animation: bounce 2s infinite;
         }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
         .error-message {
+            font-family: 'Creepster', cursive;
             font-size: 18px;
-            color: #333;
+            color: #FFB347;
             margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
+        
         .back-btn {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #ff4500 0%, #8b0000 100%);
             color: white;
             padding: 12px 30px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
             text-decoration: none;
             display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3);
         }
+        
         .back-btn:hover {
-            background-color: #0056b3;
+            background: linear-gradient(135deg, #8b0000 0%, #ff4500 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.4);
         }
     </style>
 </head>
 <body>
     <div class="error-container">
-        <div class="error-icon">❗</div>
-        <div class="error-message" th:text="${error}">오류가 발생했습니다.</div>
-        <a href="/" class="back-btn">홈으로 돌아가기</a>
+        <div class="error-icon">🎃💀👻</div>
+        <div class="error-message" th:text="${error}">할로윈 저주가 방해하고 있습니다...</div>
+        <a href="/" class="back-btn">🎃 마법 편지로 돌아가기</a>
     </div>
 </body>
 </html>

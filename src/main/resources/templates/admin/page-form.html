@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '페이지 추가'">페이지 관리</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -89,6 +90,96 @@
             padding-top: 20px;
             border-top: 1px solid #ddd;
         }
+        .item-selector {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+        }
+        .item-selector h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+        }
+        .item-select-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .item-select {
+            flex: 1;
+            min-width: 200px;
+        }
+        .add-item-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-item-btn:hover {
+            background: #218838;
+        }
+        .selected-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            min-height: 32px;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background: white;
+        }
+        .item-tag {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .item-tag .remove-item {
+            cursor: pointer;
+            font-weight: bold;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            padding: 0 3px;
+            line-height: 1;
+        }
+        .item-tag .remove-item:hover {
+            background: rgba(255,255,255,0.5);
+        }
+        .manual-input-toggle {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .manual-input-toggle:hover {
+            background: #545b62;
+        }
+        .manual-input-section {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+        }
+        .manual-input-section.show {
+            display: block;
+        }
     </style>
     <script>
         function toggleConditionalFields() {
@@ -135,12 +226,153 @@
                 document.getElementById('question2').disabled = true;
             }
             
+            
+            
+            return true; // 폼 제출 계속
+        }
+        
+        // 아이템 관리 관련 함수들
+        const itemSets = {
+            reward: new Set(),
+            remove: new Set(),
+            required: new Set()
+        };
+        
+        function addItem(type) {
+            const selectElement = document.getElementById(type + 'ItemSelect');
+            const itemId = selectElement.value.trim();
+            
+            console.log(`addItem 호출: type=${type}, itemId='${itemId}'`);
+            console.log(`addItem 호출 전 Set 상태:`, Array.from(itemSets[type]));
+            
+            if (itemId && itemId !== '' && !itemSets[type].has(itemId)) {
+                itemSets[type].add(itemId);
+                console.log(`addItem 호출 후 Set 상태:`, Array.from(itemSets[type]));
+                updateItemDisplay(type);
+                updateHiddenField(type);
+                selectElement.value = '';
+            }
+        }
+        
+        function addManualItem(type) {
+            const textElement = document.getElementById(type + 'ManualText');
+            const itemId = textElement.value.trim();
+            
+            console.log(`addManualItem 호출: type=${type}, itemId='${itemId}'`);
+            console.log(`addManualItem 호출 전 Set 상태:`, Array.from(itemSets[type]));
+            
+            if (itemId && itemId !== '' && !itemSets[type].has(itemId)) {
+                itemSets[type].add(itemId);
+                console.log(`addManualItem 호출 후 Set 상태:`, Array.from(itemSets[type]));
+                updateItemDisplay(type);
+                updateHiddenField(type);
+                textElement.value = '';
+            }
+        }
+        
+        function removeItem(type, itemId) {
+            itemSets[type].delete(itemId);
+            updateItemDisplay(type);
+            updateHiddenField(type);
+        }
+        
+        function updateItemDisplay(type) {
+            const container = document.getElementById(type + 'SelectedItems');
+            container.innerHTML = '';
+            
+            itemSets[type].forEach(itemId => {
+                const tag = document.createElement('div');
+                tag.className = 'item-tag';
+                tag.innerHTML = `
+                    <span>${itemId}</span>
+                    <span class="remove-item" onclick="removeItem('${type}', '${itemId}')">×</span>
+                `;
+                container.appendChild(tag);
+            });
+            
+            if (itemSets[type].size === 0) {
+                container.innerHTML = '<span style="color: #6c757d; font-style: italic;">선택된 아이템이 없습니다</span>';
+            }
+        }
+        
+        function updateHiddenField(type) {
+            const hiddenField = document.getElementById(type + 'ItemsField');
+            const items = Array.from(itemSets[type]).filter(item => item && item.trim() !== '');
+            console.log(`[${type}] Set 내용:`, Array.from(itemSets[type]));
+            console.log(`[${type}] 필터링 후:`, items);
+            hiddenField.value = items.length > 0 ? items.join(',') : '';
+            console.log(`[${type}] 최종 hidden field 값:`, hiddenField.value);
+        }
+        
+        function toggleManualInput(type) {
+            const manualSection = document.getElementById(type + 'ManualInput');
+            manualSection.classList.toggle('show');
+        }
+        
+        function initializeItemsFromExisting() {
+            // 페이지 수정 시 기존 아이템들을 로드
+            ['reward', 'remove', 'required'].forEach(type => {
+                const hiddenField = document.getElementById(type + 'ItemsField');
+                console.log(`[${type}] 초기 hidden field 값:`, hiddenField.value);
+                
+                // Set 초기화
+                itemSets[type].clear();
+                
+                if (hiddenField && hiddenField.value && hiddenField.value.trim() !== '') {
+                    let rawValue = hiddenField.value.trim();
+                    
+                    // 쉼표로 시작하는 경우 제거
+                    if (rawValue.startsWith(',')) {
+                        rawValue = rawValue.substring(1);
+                        console.log(`[${type}] 앞의 쉼표 제거 후:`, rawValue);
+                    }
+                    
+                    if (rawValue !== '') {
+                        const items = rawValue.split(',')
+                            .map(item => item.trim())
+                            .filter(item => item !== '' && item !== null && item !== undefined);
+                        
+                        console.log(`[${type}] 파싱된 아이템들:`, items);
+                        
+                        items.forEach(item => {
+                            if (item && item.trim() !== '') {
+                                itemSets[type].add(item.trim());
+                            }
+                        });
+                    }
+                    updateItemDisplay(type);
+                    updateHiddenField(type); // 정리된 값으로 다시 설정
+                }
+            });
+        }
+        
+        function prepareFormSubmission() {
+            const typeSelect = document.getElementById('type');
+            const selectedType = typeSelect.value;
+            
+            // 현재 선택된 타입이 아닌 question 필드는 비활성화
+            if (selectedType === 'MULTIPLE_CHOICE') {
+                document.getElementById('question2').disabled = true;
+            } else if (selectedType === 'TEXT_INPUT') {
+                document.getElementById('question').disabled = true;
+            } else {
+                // STORY_ONLY인 경우 둘 다 비활성화
+                document.getElementById('question').disabled = true;
+                document.getElementById('question2').disabled = true;
+            }
+            
+            // 아이템 목록들 최종 업데이트
+            ['reward', 'remove', 'required'].forEach(type => {
+                updateHiddenField(type);
+            });
+            
             return true; // 폼 제출 계속
         }
         
         document.addEventListener('DOMContentLoaded', function() {
             toggleConditionalFields();
             previewImage();
+            initializeItemsFromExisting();
         });
     </script>
 </head>
@@ -148,7 +380,7 @@
     <div class="container">
         <h1 class="title" th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '새 페이지 추가'">페이지 관리</h1>
         
-        <form th:action="@{/admin/pages}" method="post" th:object="${page}" onsubmit="prepareFormSubmission()">
+        <form th:action="@{/admin/pages}" method="post" th:object="${page}" onsubmit="return handleFormSubmit(event)">
             <div class="form-group">
                 <label for="id" class="form-label">페이지 ID *</label>
                 <input type="text" id="id" th:field="*{id}" class="form-input" 
@@ -239,6 +471,97 @@
                 </div>
             </div>
             
+            <!-- 아이템 지급/제거 설정 -->
+            <div class="form-group" style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #28a745; margin-top: 0;">아이템 지급/제거 설정</h3>
+                
+                <!-- 지급할 아이템 -->
+                <div class="item-selector">
+                    <h4>지급할 아이템</h4>
+                    <div class="item-select-row">
+                        <select id="rewardItemSelect" class="form-select item-select">
+                            <option value="">아이템을 선택하세요</option>
+                            <option th:each="item : ${availableItems}" th:value="${item.id}" th:text="${item.id + ' - ' + item.name}">아이템</option>
+                        </select>
+                        <button type="button" class="add-item-btn" onclick="addItem('reward')">추가</button>
+                        <button type="button" class="manual-input-toggle" onclick="toggleManualInput('reward')">직접 입력</button>
+                    </div>
+                    <div id="rewardManualInput" class="manual-input-section">
+                        <input type="text" id="rewardManualText" class="form-input" placeholder="아이템 ID를 직접 입력하세요">
+                        <button type="button" class="add-item-btn" onclick="addManualItem('reward')" style="margin-top: 5px;">수동 추가</button>
+                    </div>
+                    <div id="rewardSelectedItems" class="selected-items">
+                        <!-- 선택된 아이템들이 여기에 표시됩니다 -->
+                    </div>
+                    <input type="hidden" id="rewardItemsField" name="rewardItems" th:value="${page.rewardItems != null && !page.rewardItems.isEmpty() ? #strings.listJoin(page.rewardItems, ',') : ''}">
+                </div>
+                
+                <!-- 제거할 아이템 -->
+                <div class="item-selector">
+                    <h4>제거할 아이템</h4>
+                    <div class="item-select-row">
+                        <select id="removeItemSelect" class="form-select item-select">
+                            <option value="">아이템을 선택하세요</option>
+                            <option th:each="item : ${availableItems}" th:value="${item.id}" th:text="${item.id + ' - ' + item.name}">아이템</option>
+                        </select>
+                        <button type="button" class="add-item-btn" onclick="addItem('remove')">추가</button>
+                        <button type="button" class="manual-input-toggle" onclick="toggleManualInput('remove')">직접 입력</button>
+                    </div>
+                    <div id="removeManualInput" class="manual-input-section">
+                        <input type="text" id="removeManualText" class="form-input" placeholder="아이템 ID를 직접 입력하세요">
+                        <button type="button" class="add-item-btn" onclick="addManualItem('remove')" style="margin-top: 5px;">수동 추가</button>
+                    </div>
+                    <div id="removeSelectedItems" class="selected-items">
+                        <!-- 선택된 아이템들이 여기에 표시됩니다 -->
+                    </div>
+                    <input type="hidden" id="removeItemsField" name="removeItems" th:value="${page.removeItems != null && !page.removeItems.isEmpty() ? #strings.listJoin(page.removeItems, ',') : ''}">
+                </div>
+                
+                <div class="help-text" style="margin-top: 15px;">
+                    💡 지급 아이템은 페이지 진입시 한 번만 지급되며, 제거 아이템은 페이지 진입시 인벤토리에서 삭제됩니다.
+                </div>
+            </div>
+
+            <!-- 아이템 접근 조건 설정 -->
+            <div class="form-group" style="background-color: #fff8dc; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: #e67e22; margin-top: 0;">아이템 접근 조건</h3>
+                
+                <!-- 필요한 아이템 -->
+                <div class="item-selector">
+                    <h4>이 페이지 접근에 필요한 아이템</h4>
+                    <div class="item-select-row">
+                        <select id="requiredItemSelect" class="form-select item-select">
+                            <option value="">아이템을 선택하세요</option>
+                            <option th:each="item : ${availableItems}" th:value="${item.id}" th:text="${item.id + ' - ' + item.name}">아이템</option>
+                        </select>
+                        <button type="button" class="add-item-btn" onclick="addItem('required')">추가</button>
+                        <button type="button" class="manual-input-toggle" onclick="toggleManualInput('required')">직접 입력</button>
+                    </div>
+                    <div id="requiredManualInput" class="manual-input-section">
+                        <input type="text" id="requiredManualText" class="form-input" placeholder="아이템 ID를 직접 입력하세요">
+                        <button type="button" class="add-item-btn" onclick="addManualItem('required')" style="margin-top: 5px;">수동 추가</button>
+                    </div>
+                    <div id="requiredSelectedItems" class="selected-items">
+                        <!-- 선택된 아이템들이 여기에 표시됩니다 -->
+                    </div>
+                    <input type="hidden" id="requiredItemsField" name="requiredItems" th:value="${page.requiredItems != null && !page.requiredItems.isEmpty() ? #strings.listJoin(page.requiredItems, ',') : ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="noItemMessage" class="form-label">아이템 부족 메시지</label>
+                    <textarea id="noItemMessage" th:field="*{noItemMessage}" class="form-textarea" rows="3"
+                              placeholder="필요한 아이템이 없을 때 표시할 메시지를 입력하세요."></textarea>
+                    <div class="help-text">아이템이 부족할 때 사용자에게 표시할 메시지입니다. 비워두면 기본 메시지가 표시됩니다.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alternativePageId" class="form-label">대체 페이지 ID</label>
+                    <input type="text" id="alternativePageId" th:field="*{alternativePageId}" class="form-input" 
+                           placeholder="예: hint-page">
+                    <div class="help-text">아이템이 없을 때 이동할 페이지 ID입니다. 비워두면 오류 페이지가 표시됩니다.</div>
+                </div>
+            </div>
+
             <!-- 다음 페이지 설정 -->
             <div class="form-group" style="background-color: #f0f8ff; padding: 20px; border-radius: 8px; margin-top: 20px;">
                 <h3 style="color: #007bff; margin-top: 0;">다음 페이지 설정</h3>

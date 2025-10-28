@@ -19,7 +19,8 @@
       "Bash(mvn:*)",
       "Bash(chmod:*)",
       "Bash(apt list:*)",
-      "Bash(source ~/.bashrc)"
+      "Bash(source ~/.bashrc)",
+      "Bash(export:*)"
     ],
     "deny": []
   }

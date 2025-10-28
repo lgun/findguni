@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>findguni</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>🎃 할로윈 방탈출 - QR 스캔</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -15,9 +15,44 @@
             font-family: 'Noto Sans KR', sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b69 25%, #0f0f23 75%, #000000 100%);
             min-height: 100vh;
-            color: #2c3e50;
+            color: #F5F5DC;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255, 165, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 69, 0, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '🦇 🕷️ 🎃 👻 🕸️ 🦇 🕷️ 🎃 👻 🕸️';
+            position: fixed;
+            top: 10px;
+            left: -100%;
+            width: 300%;
+            font-size: 16px;
+            opacity: 0.3;
+            animation: float 25s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
         }
         
         .scanner-container {
@@ -27,20 +62,263 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            background: #fff;
+            background: linear-gradient(135deg, #2c1810 0%, #1a1a1a 50%, #4a1a4a 100%);
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 30px rgba(255, 69, 0, 0.3);
+            border-left: 1px solid rgba(255, 165, 0, 0.3);
+            border-right: 1px solid rgba(255, 165, 0, 0.3);
         }
         
         .scanner-header {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            color: white;
+            background: linear-gradient(135deg, #8B0000 0%, #4B0000 50%, #2F0000 100%);
+            color: #FFB347;
             padding: 20px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(255, 69, 0, 0.3);
+            position: relative;
+            z-index: 10;
+            border-bottom: 2px solid rgba(255, 165, 0, 0.3);
+        }
+        
+        .scanner-header::after {
+            content: '🎃👻🦇';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            opacity: 0.7;
         }
         
         .scanner-title {
-            font-size: 20px;
+            font-family: 'Creepster', cursive;
+            font-size: 22px;
+            font-weight: 400;
+            margin: 0;
+            color: #FF4500;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            animation: spookyGlow 2s infinite alternate;
+        }
+        
+        @keyframes spookyGlow {
+            0% { text-shadow: 2px 2px 4px rgba(255, 69, 0, 0.8); }
+            100% { text-shadow: 2px 2px 8px rgba(255, 69, 0, 1), 0 0 10px rgba(255, 165, 0, 0.5); }
+        }
+        
+        .inventory-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .inventory-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .inventory-sidebar {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100vh;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .inventory-sidebar.open {
+            right: 0;
+        }
+        
+        .inventory-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .inventory-title {
+            font-size: 18px;
             font-weight: 600;
+            margin: 0;
+            text-align: center;
+        }
+        
+        .close-inventory {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .inventory-content {
+            padding: 20px;
+        }
+        
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 15px;
+        }
+        
+        .inventory-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .inventory-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        
+        .inventory-item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 0 auto 8px;
+            background: #e9ecef;
+        }
+        
+        .inventory-item-name {
+            font-size: 11px;
+            font-weight: 500;
+            margin: 0;
+            color: #2c3e50;
+        }
+        
+        .inventory-empty {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 40px 20px;
+        }
+        
+        .inventory-empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .inventory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .inventory-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .item-detail-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .item-detail-content {
+            background: white;
+            margin: 50px auto;
+            padding: 0;
+            width: 90%;
+            max-width: 350px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: modalShow 0.3s ease-out;
+        }
+        
+        @keyframes modalShow {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .item-detail-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+            position: relative;
+        }
+        
+        .item-detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .close-detail {
+            color: white;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .close-detail:hover {
+            opacity: 0.7;
+        }
+        
+        .item-detail-body {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .item-detail-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 12px;
+            object-fit: cover;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+        }
+        
+        .item-detail-description {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
             margin: 0;
         }
         
@@ -57,6 +335,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            position: relative;
         }
         
         .scan-instructions {
@@ -198,107 +478,125 @@
 <body>
     <div class="scanner-container">
         <div class="scanner-header">
-            <h1 class="scanner-title">📷 구니를 구하자!</h1>
-            <p class="scanner-subtitle">QR코드를 마구 찾아버리자</p>
+            <h1 class="scanner-title">🎃 할로윈 저주 해제! 👻</h1>
+            <p class="scanner-subtitle">저주받은 QR코드를 찾아 구니를 구하자! 🦇</p>
+            <button onclick="openInventory()" class="inventory-button">🎒 마법 가방</button>
         </div>
         
         <div class="scanner-content">
-            <button id="start-scan" class="scan-button" onclick="startQRScan()">
-                QR코드 찾았다!
-            </button>
-            
-            <div id="scanner-area">
-                <div id="qr-reader"></div>
-                <button id="stop-scan" class="scan-button stop" onclick="stopQRScan()">
-                    ❌ 스캔 중지
-                </button>
+            <div class="scan-instructions">
+                <h3>🔮 마법 QR코드 스캔 방법</h3>
+                <p>스마트폰의 <strong>카메라 앱</strong>으로 저주받은 QR코드를 스캔하자! 🕸️<br>
+                또는 <strong>네이버/카카오톡 QR코드</strong> 기능으로 마법을 해제해보세요! ✨</p>
             </div>
-            
-            <div id="scan-result" class="scan-result"></div>
-            <div id="scan-error" class="scan-error"></div>
+            <a href="/" class="home-button">🎃 마법 편지로 돌아가기</a>
         </div>
     </div>
     
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <script>
-        let html5QrcodeScanner;
-        let isScanning = false;
-        
-        function startQRScan() {
-            if (isScanning) return;
-            
-            document.getElementById('start-scan').style.display = 'none';
-            document.getElementById('scanner-area').style.display = 'block';
-            document.getElementById('scan-result').style.display = 'none';
-            document.getElementById('scan-error').style.display = 'none';
-            
-            const config = {
-                fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
-                },
-                aspectRatio: 1.0,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            };
-            
-            html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config, false);
-            
-            html5QrcodeScanner.render(
-                (decodedText, decodedResult) => {
-                    // QR코드 스캔 성공
-                    console.log('QR 스캔 성공:', decodedText);
-                    
-                    document.getElementById('scan-result').innerHTML = 
-                        '✅ QR코드를 찾았습니다!<br>페이지로 이동 중...';
-                    document.getElementById('scan-result').style.display = 'block';
-                    
-                    // 1초 후 페이지 이동
-                    setTimeout(() => {
-                        window.location.href = decodedText;
-                    }, 1000);
-                },
-                (error) => {
-                    // 스캔 실패 (계속 시도)
-                    console.log('스캔 중...', error);
-                }
-            );
-            
-            isScanning = true;
+        // 간단한 안내만 제공
+        console.log('QR코드 스캔 페이지 로드됨');
+    </script>
+    
+    <!-- 인벤토리 사이드바 -->
+    <div class="inventory-overlay" id="inventoryOverlay" onclick="closeInventory()"></div>
+    <div class="inventory-sidebar" id="inventorySidebar">
+        <div class="inventory-header">
+            <h2 class="inventory-title">🎒 마법 가방</h2>
+            <button class="close-inventory" onclick="closeInventory()">&times;</button>
+        </div>
+        <div class="inventory-content">
+            <div class="inventory-grid" id="inventoryGrid">
+                <!-- 아이템들이 여기에 동적으로 추가됩니다 -->
+            </div>
+            <div class="inventory-empty" id="inventoryEmpty" style="display: none;">
+                <div class="inventory-empty-icon">🎒</div>
+                <h3>마법 가방이 비어있습니다</h3>
+                <p>할로윈 저주를 해제하며 마법 아이템을 수집해보세요! 🧙‍♀️</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 아이템 상세 모달 -->
+    <div id="itemDetailModal" class="item-detail-modal">
+        <div class="item-detail-content">
+            <div class="item-detail-header">
+                <span class="close-detail">&times;</span>
+                <h2 class="item-detail-title" id="itemDetailTitle">아이템 상세</h2>
+            </div>
+            <div class="item-detail-body">
+                <img id="itemDetailImage" class="item-detail-image" src="" alt="">
+                <p id="itemDetailDescription" class="item-detail-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 인벤토리 관련 함수들
+        function openInventory() {
+            loadInventoryItems();
+            document.getElementById('inventoryOverlay').classList.add('show');
+            document.getElementById('inventorySidebar').classList.add('open');
         }
         
-        function stopQRScan() {
-            if (!isScanning) return;
-            
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    document.getElementById('start-scan').style.display = 'inline-block';
-                    document.getElementById('scanner-area').style.display = 'none';
-                    isScanning = false;
-                }).catch(err => {
-                    console.error('스캐너 정리 실패:', err);
-                    document.getElementById('start-scan').style.display = 'inline-block';
-                    document.getElementById('scanner-area').style.display = 'none';
-                    isScanning = false;
+        function closeInventory() {
+            document.getElementById('inventoryOverlay').classList.remove('show');
+            document.getElementById('inventorySidebar').classList.remove('open');
+        }
+        
+        function loadInventoryItems() {
+            fetch('/api/inventory')
+                .then(response => response.json())
+                .then(items => {
+                    const inventoryGrid = document.getElementById('inventoryGrid');
+                    const inventoryEmpty = document.getElementById('inventoryEmpty');
+                    
+                    if (items.length === 0) {
+                        inventoryGrid.innerHTML = '';
+                        inventoryEmpty.style.display = 'block';
+                    } else {
+                        inventoryEmpty.style.display = 'none';
+                        inventoryGrid.innerHTML = items.map(item => `
+                            <div class="inventory-item" onclick="showItemDetail('${item.id}')">
+                                <img src="${item.imageUrl || ''}" alt="${item.name}" class="inventory-item-image" 
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display:none; width:60px; height:60px; background:#e9ecef; border-radius:8px; margin:0 auto 8px; line-height:60px; font-size:24px;">📦</div>
+                                <p class="inventory-item-name">${item.name}</p>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading inventory:', error);
                 });
-            }
         }
         
-        // 페이지 나갈 때 스캐너 정리
-        window.addEventListener('beforeunload', () => {
-            if (html5QrcodeScanner && isScanning) {
-                html5QrcodeScanner.clear();
-            }
-        });
+        function showItemDetail(itemId) {
+            fetch(`/api/inventory/item/${itemId}`)
+                .then(response => response.json())
+                .then(item => {
+                    document.getElementById('itemDetailTitle').textContent = item.name;
+                    document.getElementById('itemDetailImage').src = item.imageUrl || '';
+                    document.getElementById('itemDetailDescription').textContent = item.description || '설명이 없습니다.';
+                    document.getElementById('itemDetailModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('아이템 정보를 불러올 수 없습니다.');
+                });
+        }
         
-        // 카메라 권한 에러 처리
-        window.addEventListener('error', (e) => {
-            if (e.message.includes('camera') || e.message.includes('permission')) {
-                document.getElementById('scan-error').innerHTML = 
-                    '❌ 카메라 접근 권한이 필요합니다.<br>브라우저 설정에서 카메라 권한을 허용해주세요.';
-                document.getElementById('scan-error').style.display = 'block';
+        // 아이템 상세 모달 닫기
+        document.querySelector('.close-detail').onclick = function() {
+            document.getElementById('itemDetailModal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('itemDetailModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
             }
-        });
+        }
     </script>
 </body>
 </html>

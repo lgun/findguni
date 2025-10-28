@@ -48,6 +48,27 @@ public class GamePage {
     @Column(name = "next_button_text")
     private String nextButtonText; // 다음 페이지 버튼 텍스트
     
+    @ElementCollection
+    @CollectionTable(name = "game_page_required_items", joinColumns = @JoinColumn(name = "page_id"))
+    @Column(name = "item_id")
+    private List<String> requiredItems; // 이 페이지에 접근하기 위해 필요한 아이템들
+    
+    @Column(name = "no_item_message")
+    private String noItemMessage; // 필요한 아이템이 없을 때 표시할 메시지
+    
+    @Column(name = "alternative_page_id")
+    private String alternativePageId; // 아이템이 없을 때 이동할 대체 페이지 ID
+    
+    @ElementCollection
+    @CollectionTable(name = "game_page_reward_items", joinColumns = @JoinColumn(name = "page_id"))
+    @Column(name = "item_id")
+    private List<String> rewardItems; // 이 페이지에 진입할 때 지급할 아이템들
+    
+    @ElementCollection
+    @CollectionTable(name = "game_page_remove_items", joinColumns = @JoinColumn(name = "page_id"))
+    @Column(name = "item_id")
+    private List<String> removeItems; // 이 페이지에 진입할 때 제거할 아이템들
+    
     public enum PageType {
         STORY_ONLY,      // 스토리만 있는 페이지
         MULTIPLE_CHOICE, // 선택형 문제
@@ -158,5 +179,45 @@ public class GamePage {
     
     public void setNextButtonText(String nextButtonText) {
         this.nextButtonText = nextButtonText;
+    }
+    
+    public List<String> getRequiredItems() {
+        return requiredItems;
+    }
+    
+    public void setRequiredItems(List<String> requiredItems) {
+        this.requiredItems = requiredItems;
+    }
+    
+    public String getNoItemMessage() {
+        return noItemMessage;
+    }
+    
+    public void setNoItemMessage(String noItemMessage) {
+        this.noItemMessage = noItemMessage;
+    }
+    
+    public String getAlternativePageId() {
+        return alternativePageId;
+    }
+    
+    public void setAlternativePageId(String alternativePageId) {
+        this.alternativePageId = alternativePageId;
+    }
+    
+    public List<String> getRewardItems() {
+        return rewardItems;
+    }
+    
+    public void setRewardItems(List<String> rewardItems) {
+        this.rewardItems = rewardItems;
+    }
+    
+    public List<String> getRemoveItems() {
+        return removeItems;
+    }
+    
+    public void setRemoveItems(List<String> removeItems) {
+        this.removeItems = removeItems;
     }
 }

@@ -3,6 +3,7 @@ package com.findguni.controller;
 import com.findguni.model.GamePage;
 import com.findguni.service.GamePageService;
 import com.findguni.service.ImageService;
+import com.findguni.service.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -37,6 +38,9 @@ public class AdminController {
     @Autowired
     private ImageService imageService;
     
+    @Autowired
+    private ItemService itemService;
+    
     @GetMapping("")
     public String adminHome() {
         return "admin";
@@ -53,6 +57,7 @@ public class AdminController {
         model.addAttribute("page", new GamePage());
         model.addAttribute("pageTypes", GamePage.PageType.values());
         model.addAttribute("availableImages", imageService.getAvailableImages());
+        model.addAttribute("availableItems", itemService.getAllItems());
         return "admin/page-form";
     }
     
@@ -74,9 +79,25 @@ public class AdminController {
             choiceLinksText = linksBuilder.toString().trim();
         }
         
+        // 디버그: 실제 아이템 데이터 확인
+        System.out.println("=== 페이지 수정 - 아이템 데이터 디버그 ===");
+        System.out.println("Page ID: " + page.getId());
+        System.out.println("Required Items: " + page.getRequiredItems());
+        System.out.println("Reward Items: " + page.getRewardItems()); 
+        System.out.println("Remove Items: " + page.getRemoveItems());
+        
+        if (page.getRewardItems() != null) {
+            System.out.println("Reward Items 상세:");
+            for (int i = 0; i < page.getRewardItems().size(); i++) {
+                String item = page.getRewardItems().get(i);
+                System.out.println("  [" + i + "]: '" + item + "' (length: " + (item != null ? item.length() : "null") + ")");
+            }
+        }
+        
         model.addAttribute("page", page);
         model.addAttribute("pageTypes", GamePage.PageType.values());
         model.addAttribute("availableImages", imageService.getAvailableImages());
+        model.addAttribute("availableItems", itemService.getAllItems());
         model.addAttribute("choiceLinksText", choiceLinksText);
         return "admin/page-form";
     }
@@ -86,7 +107,10 @@ public class AdminController {
                           @RequestParam(required = false) String choicesText,
                           @RequestParam(required = false) String choiceLinksText,
                           @RequestParam(required = false) String selectedImage,
-                          @RequestParam(required = false) String question) {
+                          @RequestParam(required = false) String question,
+                          @RequestParam(required = false) String requiredItems,
+                          @RequestParam(required = false) String rewardItems,
+                          @RequestParam(required = false) String removeItems) {
         
         // 선택지 처리
         if (choicesText != null && !choicesText.trim().isEmpty()) {
@@ -121,6 +145,51 @@ public class AdminController {
         
         // question 설정 (파라미터로 받은 값만 사용)
         page.setQuestion(question != null && !question.trim().isEmpty() ? question.trim() : null);
+        
+        // 필요한 아이템 처리
+        if (requiredItems != null && !requiredItems.trim().isEmpty()) {
+            String[] itemsArray = requiredItems.split(",");
+            List<String> itemsList = Arrays.stream(itemsArray)
+                    .map(String::trim)
+                    .filter(item -> !item.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            page.setRequiredItems(itemsList.isEmpty() ? null : itemsList);
+        } else {
+            page.setRequiredItems(null);
+        }
+        
+        // 지급 아이템 처리
+        System.out.println("=== 저장 시 지급 아이템 처리 ===");
+        System.out.println("받은 rewardItems 파라미터: '" + rewardItems + "'");
+        
+        if (rewardItems != null && !rewardItems.trim().isEmpty()) {
+            String[] itemsArray = rewardItems.split(",");
+            System.out.println("split 결과: " + Arrays.toString(itemsArray));
+            
+            List<String> itemsList = Arrays.stream(itemsArray)
+                    .map(String::trim)
+                    .filter(item -> !item.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            System.out.println("필터링 후 리스트: " + itemsList);
+            page.setRewardItems(itemsList.isEmpty() ? null : itemsList);
+            System.out.println("최종 설정된 값: " + page.getRewardItems());
+        } else {
+            page.setRewardItems(null);
+            System.out.println("null로 설정됨");
+        }
+        
+        // 제거 아이템 처리
+        if (removeItems != null && !removeItems.trim().isEmpty()) {
+            String[] itemsArray = removeItems.split(",");
+            List<String> itemsList = Arrays.stream(itemsArray)
+                    .map(String::trim)
+                    .filter(item -> !item.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            page.setRemoveItems(itemsList.isEmpty() ? null : itemsList);
+        } else {
+            page.setRemoveItems(null);
+        }
         
         if (page.getId() == null || page.getId().isEmpty()) {
             return "redirect:/admin/pages";

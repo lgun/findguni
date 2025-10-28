@@ -26,6 +26,11 @@ public class QRCodeController {
         return "qr-generate";
     }
     
+    @GetMapping("/scan")
+    public String showQRScanPage() {
+        return "qr-scan";
+    }
+    
     @PostMapping("/generate")
     public String generateQRCode(@RequestParam String itemId, 
                                 @RequestParam(required = false) String customUrl,

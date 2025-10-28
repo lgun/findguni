@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이템 편집 - 구니를 구하자!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .nav-buttons {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-help {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .image-preview {
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .image-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .image-placeholder {
+            width: 200px;
+            height: 200px;
+            background: #f8f9fa;
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
+            color: #7f8c8d;
+            font-size: 48px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 th:text="${item.id != null ? '아이템 수정' : '새 아이템 추가'}">아이템 편집</h1>
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="/admin/items" class="btn btn-secondary">← 아이템 목록</a>
+        </div>
+        
+        <div class="content">
+            <form th:action="@{/admin/items/save}" method="post" th:object="${item}">
+                <div class="form-group">
+                    <label for="id">아이템 ID</label>
+                    <input type="text" id="id" th:field="*{id}" 
+                           th:readonly="${item.id != null}"
+                           placeholder="예: key-001, potion-heal"
+                           required>
+                    <div class="form-help">고유한 아이템 ID를 입력하세요. 수정 시에는 변경할 수 없습니다.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="name">아이템 이름</label>
+                    <input type="text" id="name" th:field="*{name}" 
+                           placeholder="예: 열쇠, 치료 포션"
+                           required>
+                    <div class="form-help">게임에서 표시될 아이템의 이름입니다.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">아이템 설명</label>
+                    <textarea id="description" th:field="*{description}" 
+                              placeholder="이 아이템의 용도나 특징을 설명해주세요."></textarea>
+                    <div class="form-help">아이템을 클릭했을 때 표시되는 설명입니다.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="imageUrl">이미지 URL</label>
+                    <input type="url" id="imageUrl" th:field="*{imageUrl}" 
+                           placeholder="https://example.com/image.jpg"
+                           onchange="previewImage(this.value)">
+                    <div class="form-help">아이템 이미지의 URL을 입력하세요.</div>
+                    
+                    <div class="image-preview">
+                        <img id="preview" th:src="${item.imageUrl}" th:alt="${item.name}" 
+                             style="display: none;"
+                             th:style="${item.imageUrl != null ? 'display: block;' : 'display: none;'}">
+                        <div id="placeholder" class="image-placeholder" 
+                             th:style="${item.imageUrl != null ? 'display: none;' : 'display: flex;'}">
+                            📦
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pageId">연결된 페이지 ID</label>
+                    <input type="text" id="pageId" th:field="*{pageId}" 
+                           placeholder="예: room-001, puzzle-final">
+                    <div class="form-help">이 아이템을 획득할 수 있는 페이지 ID입니다. 비워두면 수동으로 지급해야 합니다.</div>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="/admin/items" class="btn btn-secondary">취소</a>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function previewImage(url) {
+            const preview = document.getElementById('preview');
+            const placeholder = document.getElementById('placeholder');
+            
+            if (url && url.trim() !== '') {
+                preview.src = url;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+                
+                preview.onerror = function() {
+                    preview.style.display = 'none';
+                    placeholder.style.display = 'flex';
+                };
+            } else {
+                preview.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+        }
+        
+        // 페이지 로드 시 이미지 미리보기
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageUrl = document.getElementById('imageUrl').value;
+            if (imageUrl) {
+                previewImage(imageUrl);
+            }
+        });
+    </script>
+</body>
+</html>

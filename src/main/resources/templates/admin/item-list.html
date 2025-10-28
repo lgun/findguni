@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이템 관리 - 구니를 구하자!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .nav-buttons {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .item-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .item-card:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+        }
+        
+        .item-image {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #e9ecef;
+            margin-bottom: 15px;
+        }
+        
+        .item-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .item-info p {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #7f8c8d;
+            line-height: 1.4;
+        }
+        
+        .item-meta {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-bottom: 15px;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .delete-form {
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>아이템 관리</h1>
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="/admin" class="btn btn-secondary">← 관리자 메인</a>
+            <a href="/admin/items/new" class="btn btn-primary">+ 새 아이템 추가</a>
+        </div>
+        
+        <div class="content">
+            <div th:if="${!items.isEmpty()}" class="items-grid">
+                <div th:each="item : ${items}" class="item-card">
+                    <img th:src="${item.imageUrl}" th:alt="${item.name}" class="item-image" 
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div style="display:none; width:100%; height:150px; background:#e9ecef; border-radius:8px; margin-bottom:15px; line-height:150px; text-align:center; font-size:48px;">📦</div>
+                    
+                    <div class="item-info">
+                        <h3 th:text="${item.name}">아이템 이름</h3>
+                        <p th:text="${item.description}">아이템 설명</p>
+                        <div class="item-meta">
+                            ID: <span th:text="${item.id}">item-id</span>
+                            <br>페이지: <span th:text="${item.pageId ?: '미설정'}">page-id</span>
+                        </div>
+                        <div class="item-actions">
+                            <a th:href="@{/admin/items/edit/{id}(id=${item.id})}" class="btn btn-primary">수정</a>
+                            <form th:action="@{/admin/items/delete/{id}(id=${item.id})}" method="post" class="delete-form" 
+                                  onsubmit="return confirm('정말 이 아이템을 삭제하시겠습니까?')">
+                                <button type="submit" class="btn btn-danger">삭제</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${items.isEmpty()}" class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h3>아이템이 없습니다</h3>
+                <p>새로운 아이템을 추가해보세요!</p>
+                <a href="/admin/items/new" class="btn btn-primary">첫 번째 아이템 추가하기</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

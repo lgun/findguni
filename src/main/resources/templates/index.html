@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FindGuni</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>🎃 할로윈 방탈출 - 구니를 구하자!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -15,29 +15,96 @@
             font-family: 'Noto Sans KR', sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b69 25%, #0f0f23 75%, #000000 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255, 165, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 69, 0, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '🦇 🕷️ 🎃 👻 🕸️ 🦇 🕷️ 🎃 👻 🕸️';
+            position: fixed;
+            top: 10px;
+            left: -100%;
+            width: 300%;
+            font-size: 20px;
+            opacity: 0.3;
+            animation: float 30s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
         }
         
         .letter-container {
             width: 100%;
             max-width: 400px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #2c1810 0%, #1a1a1a 50%, #4a1a4a 100%);
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(255, 69, 0, 0.3), 0 0 20px rgba(138, 43, 226, 0.2);
             overflow: hidden;
             position: relative;
+            z-index: 2;
+            border: 2px solid rgba(255, 165, 0, 0.3);
+        }
+        
+        .letter-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff4500, #8a2be2, #ff8c00, #9932cc);
+            background-size: 300% 300%;
+            animation: spookyGlow 3s ease-in-out infinite;
+            border-radius: 15px;
+            z-index: -1;
+        }
+        
+        @keyframes spookyGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         
         .letter-header {
-            background: #dc3545;
-            color: white;
+            background: linear-gradient(135deg, #8B0000 0%, #4B0000 50%, #2F0000 100%);
+            color: #FFB347;
             text-align: center;
             padding: 20px;
             position: relative;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        .letter-header::after {
+            content: '🎃👻🎃';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            opacity: 0.7;
         }
         
         .urgent-badge {
@@ -58,15 +125,26 @@
         }
         
         .letter-title {
-            font-size: 24px;
-            font-weight: 700;
+            font-family: 'Creepster', cursive;
+            font-size: 28px;
+            font-weight: 400;
             margin: 0;
+            color: #FF4500;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            animation: flicker 2s infinite alternate;
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; text-shadow: 3px 3px 6px rgba(255, 69, 0, 0.8); }
+            50% { opacity: 0.8; text-shadow: 3px 3px 6px rgba(255, 69, 0, 0.4); }
         }
         
         .letter-content {
             padding: 30px 25px;
             line-height: 1.8;
-            color: #2c3e50;
+            color: #F5F5DC;
+            background: rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
         .missing-notice {
@@ -263,6 +341,25 @@
             transform: scale(1.1);
         }
         
+        .page-image {
+            width: 95%;
+            max-width: 380px;
+            height: auto;
+            max-height: 500px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: linear-gradient(45deg, #f1f2f6, #ddd);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 16px;
+            margin: 0 auto;
+            min-height: 150px;
+            overflow: hidden;
+            position: relative;
+        }
+        
         /* 모바일 최적화 */
         @media (max-width: 480px) {
             body {
@@ -294,43 +391,43 @@
 <body>
     <div class="letter-container">
         <div class="letter-header">
-            <h1 class="letter-title">납치 통지서</h1>
+            <h1 class="letter-title">🎃 할로윈 저주 통지서 👻</h1>
         </div>
         
         <div class="letter-content">
-            <p>오아린, 좋은 아침이다.</p>
-            <p>갑자기 이게 무슨 일인가 당황스럽겠지.</p>            
-            <p>결론부터 말하자면, 너의 사랑스러운 남편을 보호하고 있다.</p>
+            <p>크크크... 할로윈 밤에 안녕하신가... 🦇</p>
+            <p>갑자기 이상한 일들이 벌어져서 당황스럽겠지만...</p>            
+            <p>사실 너의 사랑스러운 구니가 할로윈 저주에 걸려 사라져버렸다! 👻</p>
             <div class="image-section">
                 <div class="page-image">
                     <img src="/images/beauty_20251002234215.jpg" alt="잠긴 문" style="width: 100%; height: auto; max-height: 500px; border-radius: 10px; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🔍&lt;br&gt;단서 이미지'">
                     
                 </div>
             </div>
-            <p>경찰이나 주변에 연락할 생각은.. 안 하는걸 추천하지.</p>
-            <p>요구조건은 간단하다.</p>
+            <p>마법이나 초자연적인 힘에 의존할 생각은... 소용없을 것이다. 🕸️</p>
+            <p>저주를 풀 수 있는 방법은 단 하나뿐이다...</p>
             
             <div class="ransom-demand">
-                <div class="ransom-amount">뽀뽀 1억번을 가져오도록.</div>
+                <div class="ransom-amount">🍬 할로윈 사탕 1억개 🍭</div>
             </div>
-            <p>이것이 구니를 되찾는 유일한 방법이다.</p>
+            <p>이것만이 구니를 되찾는 유일한 방법이다... 🎃</p>
             
             <div class="signature">
-                - 정체불명의 납치범 올림.
+                - 할로윈의 마녀 올림. 🧙‍♀️✨
             </div>
 
             <!-- 선택지 섹션 -->
             <div id="choices-section" class="choices-section">
-                <h4>이럴수가.. 뽀뽀 1억번이라니..</h4>
+                <h4>이럴수가.. 할로윈 사탕 1억개라니.. 🍬😱</h4>
                 <div class="choices">
                     <button class="choice-btn" onclick="selectChoice(1)">
-                        당장 해줄게!
+                        🍭 당장 사탕을 모으러 가자!
                     </button>
                     <button class="choice-btn" onclick="selectChoice(2)">
-                        헉.. 1억번.. 노력은 해볼게..
+                        🎃 헉.. 1억개.. 노력은 해볼게..
                     </button>
                     <button class="choice-btn" onclick="selectChoice(3)">
-                        할부는 안되겠니?
+                        👻 할부는 안되겠니? 매월 천만개씩..
                     </button>
                 </div>
             </div>
@@ -338,15 +435,15 @@
             <!-- 결과 섹션 -->
             <div id="result-section" class="result-section" style="display: none;">
                 <div class="thinking-message">
-                    <p>..그러고보니 이건 편지인데 대답을 어떻게 하지?</p>
-                    <p>우선 집안을 수색하면서 구니의 흔적을 찾아보자.</p>
+                    <p>🤔 그러고보니 이건 마법 편지인데 대답을 어떻게 하지?</p>
+                    <p>🕵️‍♀️ 우선 할로윈 저주의 흔적을 찾기 위해 집안을 수색해보자!</p>
                     <div class="signature" style="text-align: center; margin-top: 10px; font-size: 12px; color: #adb5bd;">
-                        (tip. 집안 곳곳의 QR코드를 마구마구 찍어보자!)
+                        🎃 (tip. 집안 곳곳의 할로윈 QR코드를 마구마구 찍어보자!)
                     </div>
                 </div>
                 
-                <a href="/qr-scan" class="start-button" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); margin-top: 20px;">
-                    📷 QR코드 스캔하러 가기
+                <a href="/qr-scan" class="start-button" style="background: linear-gradient(135deg, #ff4500 0%, #8b0000 100%); margin-top: 20px;">
+                    📷 할로윈 단서 찾기 시작! 🎃
                 </a>
             </div>
         </div>
