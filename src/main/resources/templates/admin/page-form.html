@@ -211,25 +211,6 @@
             }
         }
         
-        function prepareFormSubmission() {
-            const typeSelect = document.getElementById('type');
-            const selectedType = typeSelect.value;
-            
-            // 현재 선택된 타입이 아닌 question 필드는 비활성화
-            if (selectedType === 'MULTIPLE_CHOICE') {
-                document.getElementById('question2').disabled = true;
-            } else if (selectedType === 'TEXT_INPUT') {
-                document.getElementById('question').disabled = true;
-            } else {
-                // STORY_ONLY인 경우 둘 다 비활성화
-                document.getElementById('question').disabled = true;
-                document.getElementById('question2').disabled = true;
-            }
-            
-            
-            
-            return true; // 폼 제출 계속
-        }
         
         // 아이템 관리 관련 함수들
         const itemSets = {
@@ -350,15 +331,19 @@
             const typeSelect = document.getElementById('type');
             const selectedType = typeSelect.value;
             
-            // 현재 선택된 타입이 아닌 question 필드는 비활성화
+            // 현재 선택된 타입이 아닌 question 필드는 완전히 제거
             if (selectedType === 'MULTIPLE_CHOICE') {
-                document.getElementById('question2').disabled = true;
+                const question2 = document.getElementById('question2');
+                if (question2) question2.remove();
             } else if (selectedType === 'TEXT_INPUT') {
-                document.getElementById('question').disabled = true;
+                const question1 = document.getElementById('question');
+                if (question1) question1.remove();
             } else {
-                // STORY_ONLY인 경우 둘 다 비활성화
-                document.getElementById('question').disabled = true;
-                document.getElementById('question2').disabled = true;
+                // STORY_ONLY인 경우 둘 다 제거
+                const question1 = document.getElementById('question');
+                const question2 = document.getElementById('question2');
+                if (question1) question1.remove();
+                if (question2) question2.remove();
             }
             
             // 아이템 목록들 최종 업데이트
@@ -380,7 +365,7 @@
     <div class="container">
         <h1 class="title" th:text="${page.id != null and !#strings.isEmpty(page.id)} ? '페이지 수정' : '새 페이지 추가'">페이지 관리</h1>
         
-        <form th:action="@{/admin/pages}" method="post" th:object="${page}" onsubmit="return handleFormSubmit(event)">
+        <form th:action="@{/admin/pages}" method="post" th:object="${page}" onsubmit="return prepareFormSubmission()">
             <div class="form-group">
                 <label for="id" class="form-label">페이지 ID *</label>
                 <input type="text" id="id" th:field="*{id}" class="form-input" 
@@ -447,8 +432,8 @@
                 <div class="form-group">
                     <label for="choiceLinksText" class="form-label">선택지별 링크 (페이지 ID만)</label>
                     <textarea id="choiceLinksText" name="choiceLinksText" class="form-textarea" 
-                              th:text="${choiceLinksText}"
-                              placeholder="각 선택지에 대응하는 페이지 ID를 순서대로 입력:&#10;page1&#10;page2&#10;page3"></textarea>
+                              placeholder="각 선택지에 대응하는 페이지 ID를 순서대로 입력:&#10;page1&#10;page2&#10;page3"
+                              th:text="${choiceLinksText}"></textarea>
                     <div class="help-text">선택지와 같은 순서로 페이지 ID만 각 줄에 입력하세요.</div>
                 </div>
             </div>
@@ -545,13 +530,6 @@
                         <!-- 선택된 아이템들이 여기에 표시됩니다 -->
                     </div>
                     <input type="hidden" id="requiredItemsField" name="requiredItems" th:value="${page.requiredItems != null && !page.requiredItems.isEmpty() ? #strings.listJoin(page.requiredItems, ',') : ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="noItemMessage" class="form-label">아이템 부족 메시지</label>
-                    <textarea id="noItemMessage" th:field="*{noItemMessage}" class="form-textarea" rows="3"
-                              placeholder="필요한 아이템이 없을 때 표시할 메시지를 입력하세요."></textarea>
-                    <div class="help-text">아이템이 부족할 때 사용자에게 표시할 메시지입니다. 비워두면 기본 메시지가 표시됩니다.</div>
                 </div>
                 
                 <div class="form-group">

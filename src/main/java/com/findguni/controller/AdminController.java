@@ -70,13 +70,30 @@ public class AdminController {
         
         // 기존 choiceLinks를 선택지 순서대로 분리
         String choiceLinksText = "";
-        if (page.getChoices() != null && page.getChoiceLinks() != null) {
+        System.out.println("=== 수정 폼 로딩 - 선택지 링크 디버그 ===");
+        System.out.println("기존 선택지: " + page.getChoices());
+        System.out.println("기존 선택지 링크 맵: " + page.getChoiceLinks());
+        
+        if (page.getChoices() != null && page.getChoiceLinks() != null && !page.getChoices().isEmpty() && !page.getChoiceLinks().isEmpty()) {
             StringBuilder linksBuilder = new StringBuilder();
             for (String choice : page.getChoices()) {
-                String link = page.getChoiceLinks().get(choice);
-                linksBuilder.append(link != null ? link : "").append("\n");
+                String trimmedChoice = choice.trim();
+                String link = page.getChoiceLinks().get(trimmedChoice);
+                System.out.println("선택지 '" + trimmedChoice + "' -> 링크 '" + link + "'");
+                
+                if (link != null && !link.trim().isEmpty()) {
+                    linksBuilder.append(link.trim());
+                }
+                linksBuilder.append("\n");
             }
-            choiceLinksText = linksBuilder.toString().trim();
+            if (linksBuilder.length() > 0) {
+                choiceLinksText = linksBuilder.toString().trim();
+            }
+            System.out.println("생성된 choiceLinksText: '" + choiceLinksText + "'");
+        } else {
+            System.out.println("선택지 또는 링크 맵이 null이거나 비어있음");
+            System.out.println("선택지 개수: " + (page.getChoices() != null ? page.getChoices().size() : "null"));
+            System.out.println("링크 맵 크기: " + (page.getChoiceLinks() != null ? page.getChoiceLinks().size() : "null"));
         }
         
         // 디버그: 실제 아이템 데이터 확인
@@ -99,6 +116,11 @@ public class AdminController {
         model.addAttribute("availableImages", imageService.getAvailableImages());
         model.addAttribute("availableItems", itemService.getAllItems());
         model.addAttribute("choiceLinksText", choiceLinksText);
+        
+        System.out.println("=== Model에 전달되는 최종 choiceLinksText ===");
+        System.out.println("'" + choiceLinksText + "'");
+        System.out.println("길이: " + choiceLinksText.length());
+        
         return "admin/page-form";
     }
     
@@ -119,23 +141,36 @@ public class AdminController {
         }
         
         // 선택지 링크 처리 (선택지와 링크를 순서대로 매칭)
+        System.out.println("=== 선택지 링크 처리 디버그 ===");
+        System.out.println("choicesText: '" + choicesText + "'");
+        System.out.println("choiceLinksText: '" + choiceLinksText + "'");
+        
         if (choicesText != null && choiceLinksText != null && 
             !choicesText.trim().isEmpty() && !choiceLinksText.trim().isEmpty()) {
             
             String[] choices = choicesText.split("\n");
             String[] links = choiceLinksText.split("\n");
             
+            System.out.println("choices 배열: " + Arrays.toString(choices));
+            System.out.println("links 배열: " + Arrays.toString(links));
+            
             Map<String, String> choiceLinksMap = new HashMap<>();
             int minLength = Math.min(choices.length, links.length);
+            System.out.println("처리할 최소 길이: " + minLength);
             
             for (int i = 0; i < minLength; i++) {
                 String choice = choices[i].trim();
                 String link = links[i].trim();
+                System.out.println("처리 중 [" + i + "]: choice='" + choice + "', link='" + link + "'");
                 if (!choice.isEmpty() && !link.isEmpty()) {
                     choiceLinksMap.put(choice, link);
+                    System.out.println("맵에 추가됨: " + choice + " -> " + link);
                 }
             }
+            System.out.println("최종 choiceLinksMap: " + choiceLinksMap);
             page.setChoiceLinks(choiceLinksMap);
+        } else {
+            System.out.println("선택지 링크 처리 조건에 맞지 않음");
         }
         
         // 선택된 이미지가 있으면 경로 설정
@@ -195,24 +230,24 @@ public class AdminController {
             return "redirect:/admin/pages";
         }
         
+        System.out.println("=== 저장 전 페이지 데이터 ===");
+        System.out.println("선택지: " + page.getChoices());
+        System.out.println("선택지 링크 맵: " + page.getChoiceLinks());
+        
         gamePageService.addPage(page);
+        
+        // 저장 후 다시 불러와서 확인
+        GamePage savedPage = gamePageService.getPage(page.getId());
+        System.out.println("=== 저장 후 DB에서 불러온 데이터 ===");
+        System.out.println("선택지: " + savedPage.getChoices());
+        System.out.println("선택지 링크 맵: " + savedPage.getChoiceLinks());
+        
         return "redirect:/admin/pages";
     }
     
     @PostMapping("/pages/{id}/delete")
     public String deletePage(@PathVariable String id) {
         gamePageService.deletePage(id);
-        return "redirect:/admin/pages";
-    }
-    
-    @PostMapping("/pages/reset-sample-data")
-    public String resetSampleData() {
-        // 모든 기존 페이지 삭제
-        gamePageService.getAllPages().forEach(page -> gamePageService.deletePage(page.getId()));
-        
-        // 샘플 페이지들 생성
-        gamePageService.createDefaultPages();
-        
         return "redirect:/admin/pages";
     }
     

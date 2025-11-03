@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title th:text="${page.title}">🎃 할로윈 방탈출</title>
+    <title th:text="${page.title}">🎃 할로윈 파티에 오신것을 환영합니다</title>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -37,19 +37,6 @@
             z-index: 0;
         }
         
-        body::after {
-            content: '🦇 🕷️ 🎃 👻 🕸️ 🦇 🕷️ 🎃 👻 🕸️';
-            position: fixed;
-            top: 10px;
-            left: -100%;
-            width: 300%;
-            font-size: 16px;
-            opacity: 0.2;
-            animation: float 25s linear infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
         @keyframes float {
             0% { transform: translateX(0); }
             100% { transform: translateX(100%); }
@@ -78,16 +65,6 @@
             box-shadow: 0 4px 20px rgba(255, 69, 0, 0.3);
             position: relative;
             border-bottom: 2px solid rgba(255, 165, 0, 0.3);
-        }
-        
-        .page-header::after {
-            content: '🎃👻🦇';
-            position: absolute;
-            top: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            opacity: 0.7;
         }
         
         .page-title {
@@ -337,9 +314,8 @@
         }
         
         .image-section {
-            padding: 20px;
+            padding: 40px 20px 20px 20px;
             text-align: center;
-            background: #f8f9fa;
         }
         
         .page-image {
@@ -363,39 +339,38 @@
         
         .content-section {
             flex: 1;
-            padding: 25px 20px;
+            padding: 10px 20px 25px 20px;
         }
         
         .page-content {
-            background: #fff;
+            background: linear-gradient(135deg, #2c1810 0%, #1a1a1a 100%);
+            color: #FFB347;
             padding: 25px;
             border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border-left: 4px solid #3498db;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3);
+            border-left: 4px solid #FF4500;
             line-height: 1.8;
             white-space: pre-line;
-            min-height: 150px;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            flex-direction: column;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
         .question-section {
-            background: #f8f9fa;
-            border: 2px solid #dee2e6;
+            background: linear-gradient(135deg, #4a1a4a 0%, #2c1810 100%);
+            border: 2px solid rgba(255, 165, 0, 0.5);
             border-radius: 10px;
             padding: 25px 20px;
-            margin-top: 20px;
+            margin-top: 50px;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
         }
         
         .question-title {
             font-size: 18px;
             font-weight: 600;
-            color: #2c3e50;
+            color: #FFB347;
             margin: 0 0 20px 0;
             text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
         
         /* 선택형 문제 스타일 */
@@ -406,8 +381,8 @@
         }
         
         .choice-btn {
-            background: #fff;
-            border: 2px solid #dee2e6;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c1810 100%);
+            border: 2px solid rgba(255, 165, 0, 0.3);
             border-radius: 8px;
             padding: 15px 20px;
             font-size: 16px;
@@ -415,16 +390,18 @@
             transition: all 0.3s ease;
             text-align: left;
             text-decoration: none;
-            color: #2c3e50;
+            color: #FFB347;
             display: block;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
         .choice-btn:hover {
-            border-color: #3498db;
-            background: #f8f9fa;
+            border-color: #FF4500;
+            background: linear-gradient(135deg, #2c1810 0%, #4a1a4a 100%);
             transform: translateY(-2px);
             text-decoration: none;
-            color: #2c3e50;
+            color: #FFB347;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.4);
         }
         
         /* 주관식 문제 스타일 */
@@ -437,21 +414,27 @@
         .answer-input {
             width: 100%;
             padding: 15px;
-            border: 2px solid #dee2e6;
+            border: 2px solid rgba(255, 165, 0, 0.3);
             border-radius: 8px;
             font-size: 16px;
             font-family: inherit;
             transition: border-color 0.3s ease;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c1810 100%);
+            color: #FFB347;
         }
         
         .answer-input:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            border-color: #FF4500;
+            box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.2);
+        }
+        
+        .answer-input::placeholder {
+            color: rgba(255, 179, 71, 0.6);
         }
         
         .submit-btn {
-            background: #28a745;
+            background: linear-gradient(135deg, #FF4500 0%, #8B0000 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -460,11 +443,14 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
         .submit-btn:hover {
-            background: #218838;
+            background: linear-gradient(135deg, #8B0000 0%, #FF4500 100%);
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.4);
         }
         
         .submit-btn:active {
@@ -496,11 +482,10 @@
         .story-page .content-section {
             display: flex;
             flex-direction: column;
-            justify-content: center;
         }
         
         .continue-btn {
-            background: #17a2b8;
+            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -513,13 +498,16 @@
             text-align: center;
             display: inline-block;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
         .continue-btn:hover {
-            background: #138496;
+            background: linear-gradient(135deg, #4B0082 0%, #8A2BE2 100%);
             text-decoration: none;
             color: white;
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.4);
         }
         
         /* 최종 페이지 스타일 */
@@ -542,7 +530,7 @@
             }
             
             .image-section {
-                padding: 15px;
+                padding: 40px 20px 20px 20px;
             }
             
             .page-image {
@@ -571,34 +559,44 @@
     <div class="page-container" th:classappend="${page.id == 'final'} ? 'final-page' : (${page.type.name() == 'STORY_ONLY'} ? 'story-page' : '')">
         <div class="page-header">
             <h1 class="page-title" th:text="${page.title}">페이지 제목</h1>
-            <button onclick="openInventory()" class="inventory-button">🎒 마법 가방</button>
+            <button onclick="openInventory()" class="inventory-button">가방</button>
+        </div>
+        
+        <div th:if="${usedItems != null && !usedItems.isEmpty()}" class="item-notification" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">
+            🔥 아이템을 사용했습니다: 
+            <span th:each="item, iterStat : ${usedItems}">
+                <span th:text="${item.name}">아이템 이름</span><span th:if="${!iterStat.last}">, </span>
+            </span> 🔥
         </div>
         
         <div th:if="${newItems != null && !newItems.isEmpty()}" class="item-notification">
-            ✨🎃 새로운 마법 아이템을 발견했습니다: 
+            ✨ 새로운 아이템을 발견했습니다: 
             <span th:each="item, iterStat : ${newItems}">
                 <span th:text="${item.name}">아이템 이름</span><span th:if="${!iterStat.last}">, </span>
-            </span> 🧙‍♀️✨
+            </span> 👻🎪✨
         </div>
         
         <div th:if="${legacyNewItems != null && !legacyNewItems.isEmpty()}" class="item-notification">
-            ✨🎃 새로운 마법 아이템을 발견했습니다: 
+            ✨ 새로운 아이템을 발견했습니다: 
             <span th:each="item, iterStat : ${legacyNewItems}">
                 <span th:text="${item.name}">아이템 이름</span><span th:if="${!iterStat.last}">, </span>
-            </span> 🧙‍♀️✨
+            </span> 👻🎪✨
         </div>
         
-        <div class="image-section">
+        <div th:if="${accessDeniedMessage != null}" class="item-notification" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+            🚫 <span th:text="${accessDeniedMessage}">접근 거부 메시지</span> 🚫
+        </div>
+        
+        <div th:if="${page.imageUrl}" class="image-section">
             <div class="page-image">
-                <img th:if="${page.imageUrl}" th:src="${page.imageUrl}" th:alt="${page.title}" 
+                <img th:src="${page.imageUrl}" th:alt="${page.title}" 
                      style="width: 100%; height: auto; max-height: 500px; border-radius: 10px; object-fit: contain;"
-                     onerror="this.style.display='none'; this.parentElement.innerHTML='🔍<br>단서 이미지'">
-                <span th:unless="${page.imageUrl}">🔍<br>단서 이미지</span>
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='🎃<br>파티 미션'">
             </div>
         </div>
         
         <div class="content-section">
-            <div class="page-content" th:text="${page.content}">
+            <div class="page-content" th:utext="${page.content}">
                 페이지 내용
             </div>
             
@@ -644,10 +642,10 @@
                 </a>
             </div>
             
-            <!-- QR 스캔으로 돌아가기 버튼 (모든 페이지에 추가) -->
-            <div style="margin-top: 20px; text-align: center;">
+            <!-- QR 스캔으로 돌아가기 버튼 (다음 페이지가 없을 때만 표시) -->
+            <div th:if="${page.nextPageId == null || #strings.isEmpty(page.nextPageId)}" style="margin-top: 20px; text-align: center;">
                 <a href="/qr-scan" class="continue-btn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); font-size: 14px; padding: 10px 20px;">
-                    📷 QR 스캔으로 돌아가기
+                    📷 메인 화면으로
                 </a>
             </div>
             
@@ -680,7 +678,7 @@
     <div class="inventory-overlay" id="inventoryOverlay" onclick="closeInventory()"></div>
     <div class="inventory-sidebar" id="inventorySidebar">
         <div class="inventory-header">
-            <h2 class="inventory-title">🎒 마법 가방</h2>
+            <h2 class="inventory-title">가방</h2>
             <button class="close-inventory" onclick="closeInventory()">&times;</button>
         </div>
         <div class="inventory-content">
@@ -689,8 +687,7 @@
             </div>
             <div class="inventory-empty" id="inventoryEmpty" style="display: none;">
                 <div class="inventory-empty-icon">🎒</div>
-                <h3>마법 가방이 비어있습니다</h3>
-                <p>할로윈 저주를 해제하며 마법 아이템을 수집해보세요! 🧙‍♀️</p>
+                <h3>가방이 비어있습니다</h3>
             </div>
         </div>
     </div>

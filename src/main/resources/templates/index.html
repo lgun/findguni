@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎃 할로윈 방탈출 - 구니를 구하자!</title>
+    <title>🎃 할로윈 파티 초대장</title>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -391,43 +391,33 @@
 <body>
     <div class="letter-container">
         <div class="letter-header">
-            <h1 class="letter-title">🎃 할로윈 저주 통지서 👻</h1>
+            <h1 class="letter-title">🎃 할로윈 파티 초대장 👻</h1>
         </div>
         
         <div class="letter-content">
-            <p>크크크... 할로윈 밤에 안녕하신가... 🦇</p>
-            <p>갑자기 이상한 일들이 벌어져서 당황스럽겠지만...</p>            
-            <p>사실 너의 사랑스러운 구니가 할로윈 저주에 걸려 사라져버렸다! 👻</p>
-            <div class="image-section">
-                <div class="page-image">
-                    <img src="/images/beauty_20251002234215.jpg" alt="잠긴 문" style="width: 100%; height: auto; max-height: 500px; border-radius: 10px; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='🔍&lt;br&gt;단서 이미지'">
-                    
-                </div>
-            </div>
-            <p>마법이나 초자연적인 힘에 의존할 생각은... 소용없을 것이다. 🕸️</p>
-            <p>저주를 풀 수 있는 방법은 단 하나뿐이다...</p>
-            
-            <div class="ransom-demand">
-                <div class="ransom-amount">🍬 할로윈 사탕 1억개 🍭</div>
-            </div>
-            <p>이것만이 구니를 되찾는 유일한 방법이다... 🎃</p>
+            <p>안녕하세요! 꼬마유령 셰프입니다! 👻👨‍🍳</p>
+            <p>올해 할로윈에 특별한 파티를 준비했어요!</p>            
+            <!-- <div class="ransom-demand" style="background: #fff3e0; border: 2px solid #ff9800;">
+                <h3 style="color: #e65100; margin: 0 0 15px 0;">🎮 파티 입장 미션 🎮</h3>
+                <div class="ransom-amount" style="color: #ff6f00;">🎃 할로윈 수수께끼 풀기! 🧩</div>
+            </div> -->
             
             <div class="signature">
-                - 할로윈의 마녀 올림. 🧙‍♀️✨
+                - 꼬마유령 셰프 올림 👻👨‍🍳✨
             </div>
 
             <!-- 선택지 섹션 -->
             <div id="choices-section" class="choices-section">
-                <h4>이럴수가.. 할로윈 사탕 1억개라니.. 🍬😱</h4>
+                <h4>와! 할로윈 파티라니 너무 재미있겠어요! 🎉✨</h4>
                 <div class="choices">
                     <button class="choice-btn" onclick="selectChoice(1)">
-                        🍭 당장 사탕을 모으러 가자!
+                        🎪 당장 파티에 참가하러 가자!
                     </button>
                     <button class="choice-btn" onclick="selectChoice(2)">
-                        🎃 헉.. 1억개.. 노력은 해볼게..
+                        🎃 미션이 어려울까 걱정되지만... 도전해볼게요!
                     </button>
                     <button class="choice-btn" onclick="selectChoice(3)">
-                        👻 할부는 안되겠니? 매월 천만개씩..
+                        👻 
                     </button>
                 </div>
             </div>
@@ -435,15 +425,11 @@
             <!-- 결과 섹션 -->
             <div id="result-section" class="result-section" style="display: none;">
                 <div class="thinking-message">
-                    <p>🤔 그러고보니 이건 마법 편지인데 대답을 어떻게 하지?</p>
-                    <p>🕵️‍♀️ 우선 할로윈 저주의 흔적을 찾기 위해 집안을 수색해보자!</p>
-                    <div class="signature" style="text-align: center; margin-top: 10px; font-size: 12px; color: #adb5bd;">
-                        🎃 (tip. 집안 곳곳의 할로윈 QR코드를 마구마구 찍어보자!)
-                    </div>
+                    <p>🎊 좋아요! 그럼 파티장으로 가는 길을 안내해드릴게요!</p>
                 </div>
                 
                 <a href="/qr-scan" class="start-button" style="background: linear-gradient(135deg, #ff4500 0%, #8b0000 100%); margin-top: 20px;">
-                    📷 할로윈 단서 찾기 시작! 🎃
+                    📷 할로윈 파티 입장하기! 🎃
                 </a>
             </div>
         </div>
@@ -458,13 +444,13 @@
             let feedback = '';
             switch(choiceNumber) {
                 case 1:
-                    feedback = '용감한 선택이네요! 하지만...';
+                    feedback = '열정적이에요! 파티가 기다리고 있어요!';
                     break;
                 case 2:
-                    feedback = '현실적인 판단이군요. 그런데...';
+                    feedback = '괜찮아요! 함께라면 어떤 미션이든 할 수 있어요!';
                     break;
                 case 3:
-                    feedback = '창의적인 발상이에요! 그러나...';
+                    feedback = '구니도 당신을 기다리고 있을 거예요!';
                     break;
             }
             

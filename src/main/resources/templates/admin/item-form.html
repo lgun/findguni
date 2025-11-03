@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>아이템 편집 - 구니를 구하자!</title>
+    <title>아이템 편집</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -190,11 +190,18 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="imageUrl">이미지 URL</label>
-                    <input type="url" id="imageUrl" th:field="*{imageUrl}" 
-                           placeholder="https://example.com/image.jpg"
-                           onchange="previewImage(this.value)">
-                    <div class="form-help">아이템 이미지의 URL을 입력하세요.</div>
+                    <label for="selectedItemImage">아이템 이미지 선택</label>
+                    <select id="selectedItemImage" name="selectedItemImage" 
+                            th:onchange="previewItemImage(this.value)"
+                            style="width: 100%; padding: 12px 15px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                        <option value="">이미지를 선택하세요</option>
+                        <option th:each="image : ${availableItemImages}" 
+                                th:value="${image}" 
+                                th:text="${image}"
+                                th:selected="${item.imageUrl != null && item.imageUrl.contains(image)}">
+                        </option>
+                    </select>
+                    <div class="form-help">resources/static/images/items 폴더의 이미지를 선택하세요.</div>
                     
                     <div class="image-preview">
                         <img id="preview" th:src="${item.imageUrl}" th:alt="${item.name}" 
@@ -204,6 +211,16 @@
                              th:style="${item.imageUrl != null ? 'display: none;' : 'display: flex;'}">
                             📦
                         </div>
+                    </div>
+                    
+                    <!-- 기존 URL 입력 방식도 유지 (고급 사용자용) -->
+                    <div style="margin-top: 15px;">
+                        <label for="imageUrl">또는 직접 이미지 URL 입력</label>
+                        <input type="text" id="imageUrl" th:field="*{imageUrl}" 
+                               placeholder="https://example.com/image.jpg 또는 /images/items/file.png"
+                               onchange="previewImage(this.value)"
+                               style="width: 100%; padding: 12px 15px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                        <div class="form-help">외부 이미지 URL 또는 로컬 이미지 경로를 직접 입력할 수도 있습니다.</div>
                     </div>
                 </div>
                 
@@ -223,14 +240,47 @@
     </div>
     
     <script>
+        function previewItemImage(fileName) {
+            const preview = document.getElementById('preview');
+            const placeholder = document.getElementById('placeholder');
+            const imageUrlInput = document.getElementById('imageUrl');
+            
+            if (fileName && fileName.trim() !== '') {
+                const imageUrl = '/images/items/' + fileName;
+                preview.src = imageUrl;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+                
+                // 직접 입력 필드도 업데이트
+                imageUrlInput.value = imageUrl;
+                
+                preview.onerror = function() {
+                    preview.style.display = 'none';
+                    placeholder.style.display = 'flex';
+                    alert('이미지를 불러올 수 없습니다. 파일이 존재하는지 확인해주세요.');
+                };
+            } else {
+                preview.style.display = 'none';
+                placeholder.style.display = 'flex';
+                imageUrlInput.value = '';
+            }
+        }
+        
         function previewImage(url) {
             const preview = document.getElementById('preview');
             const placeholder = document.getElementById('placeholder');
+            const selectElement = document.getElementById('selectedItemImage');
             
             if (url && url.trim() !== '') {
                 preview.src = url;
                 preview.style.display = 'block';
                 placeholder.style.display = 'none';
+                
+                // URL에서 파일명 추출하여 셀렉트 박스 동기화
+                if (url.includes('/images/items/')) {
+                    const fileName = url.split('/images/items/')[1];
+                    selectElement.value = fileName;
+                }
                 
                 preview.onerror = function() {
                     preview.style.display = 'none';
@@ -239,6 +289,7 @@
             } else {
                 preview.style.display = 'none';
                 placeholder.style.display = 'flex';
+                selectElement.value = '';
             }
         }
         

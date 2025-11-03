@@ -2,6 +2,7 @@ package com.findguni.controller;
 
 import com.findguni.model.Item;
 import com.findguni.service.ItemService;
+import com.findguni.service.ImageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +19,9 @@ public class ItemAdminController {
     @Autowired
     private ItemService itemService;
     
+    @Autowired
+    private ImageService imageService;
+    
     @GetMapping
     public String showItemList(Model model) {
         List<Item> items = itemService.getAllItems();
@@ -28,6 +32,7 @@ public class ItemAdminController {
     @GetMapping("/new")
     public String showItemForm(Model model) {
         model.addAttribute("item", new Item());
+        model.addAttribute("availableItemImages", imageService.getAvailableItemImages());
         return "admin/item-form";
     }
     
@@ -36,13 +41,20 @@ public class ItemAdminController {
         Optional<Item> item = itemService.getItemById(id);
         if (item.isPresent()) {
             model.addAttribute("item", item.get());
+            model.addAttribute("availableItemImages", imageService.getAvailableItemImages());
             return "admin/item-form";
         }
         return "redirect:/admin/items";
     }
     
     @PostMapping("/save")
-    public String saveItem(@ModelAttribute Item item) {
+    public String saveItem(@ModelAttribute Item item, 
+                          @RequestParam(required = false) String selectedItemImage) {
+        // 선택된 이미지가 있으면 경로 설정
+        if (selectedItemImage != null && !selectedItemImage.isEmpty()) {
+            item.setImageUrl(imageService.getItemImagePath(selectedItemImage));
+        }
+        
         itemService.saveItem(item);
         return "redirect:/admin/items";
     }
