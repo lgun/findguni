@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>내 게임 · Findguni Maker</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+    <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: makerNav('dashboard')}"></div>
+<main class="page-main" id="main-content">
+    <div class="container stack stack--lg">
+        <div class="alert alert--success" th:if="${success}" role="status">
+            <span aria-hidden="true">✓</span><span th:text="${success}">저장했습니다.</span>
+            <button class="alert__close" type="button" data-dismiss aria-label="알림 닫기">×</button>
+        </div>
+        <div class="alert alert--danger" th:if="${error}" role="alert">
+            <span aria-hidden="true">!</span><span th:text="${error}">문제가 발생했습니다.</span>
+        </div>
+
+        <header class="dashboard-header">
+            <div>
+                <p class="eyebrow">Maker workspace</p>
+                <h1 class="page-title"><span th:text="${maker != null ? maker.displayName : '메이커'}">메이커</span>님의 게임</h1>
+                <p class="lede">스토리부터 자물쇠, QR 링크까지 한곳에서 만들고 발행하세요.</p>
+            </div>
+            <a class="btn" th:href="@{/maker/games/new}">＋ 새 게임 만들기</a>
+        </header>
+
+        <section class="metric-grid" aria-label="게임 현황">
+            <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.totalGames : 0}">0</strong><span class="metric__label">전체 게임</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.publishedGames : 0}">0</strong><span class="metric__label">발행 중</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.totalPlays : 0}">0</strong><span class="metric__label">누적 플레이</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.completedPlays : 0}">0</strong><span class="metric__label">누적 완주</span></div>
+        </section>
+
+        <section aria-labelledby="my-games-title">
+            <div class="spread" style="margin-bottom:1rem">
+                <h2 class="section-title" id="my-games-title">내 게임</h2>
+                <span class="muted" th:if="${games != null}" th:text="|${#lists.size(games)}개|">0개</span>
+            </div>
+
+            <div class="empty-state" th:if="${games == null or #lists.isEmpty(games)}">
+                <div class="empty-state__icon" aria-hidden="true">＋</div>
+                <h2>첫 번째 방탈출을 만들어 볼까요?</h2>
+                <p>검증된 템플릿을 선택하면 스테이지와 퍼즐 뼈대가 자동으로 준비됩니다.</p>
+                <a class="btn" th:href="@{/maker/games/new}">템플릿으로 시작하기</a>
+            </div>
+
+            <div class="dashboard-grid" th:unless="${games == null or #lists.isEmpty(games)}">
+                <article class="card dashboard-game" th:each="game : ${games}">
+                    <div class="dashboard-game__thumb">
+                        <img th:if="${game.coverImageUrl != null and !#strings.isEmpty(game.coverImageUrl)}" th:src="${game.coverImageUrl}" th:alt="|${game.title} 표지|">
+                    </div>
+                    <div>
+                        <div class="cluster">
+                            <span class="badge badge--success" th:if="${game.status != null and game.status.name() == 'PUBLISHED'}">발행 중</span>
+                            <span class="badge badge--warning" th:unless="${game.status != null and game.status.name() == 'PUBLISHED'}">초안</span>
+                            <span class="badge" th:text="${game.theme}">MIDNIGHT</span>
+                        </div>
+                        <h2 th:text="${game.title}">게임 제목</h2>
+                        <p class="muted" th:text="${game.summary != null ? game.summary : '아직 소개가 없습니다.'}">게임 소개</p>
+                        <div class="cluster muted" style="font-size:.8rem;margin-top:.6rem">
+                            <span th:text="|예상 ${game.estimatedMinutes}분|">예상 30분</span>
+                            <span aria-hidden="true">·</span>
+                            <span th:text="${game.visibility.displayName}">링크 공개</span>
+                            <span aria-hidden="true">·</span>
+                            <span th:if="${game.updatedAt != null}" th:text="|${#temporals.format(game.updatedAt, 'M월 d일')} 수정|">최근 수정</span>
+                        </div>
+                    </div>
+                    <div class="button-row">
+                        <a class="btn btn--secondary btn--small" th:if="${game.slug != null and game.status != null and game.status.name() == 'PUBLISHED'}" th:href="@{/play/{slug}(slug=${game.slug})}" target="_blank" rel="noopener">플레이 보기</a>
+                        <a class="btn btn--small" th:href="@{/maker/games/{id}/edit(id=${game.id})}">편집하기</a>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: findguni
+      MYSQL_USER: findguni
+      MYSQL_PASSWORD: findguni-dev
+      MYSQL_ROOT_PASSWORD: findguni-root-dev
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - findguni_mysql_data:/var/lib/mysql
+
+volumes:
+  findguni_mysql_data:
+    name: findguni_mysql_data

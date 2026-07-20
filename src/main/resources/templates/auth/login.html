@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>메이커 로그인 · Findguni</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"><script defer th:src="@{/js/app.js}" src="/js/app.js"></script></head>
+<body>
+<div th:replace="~{fragments/nav :: publicNav('login')}"></div>
+<main class="auth-shell" id="main-content"><div class="container--narrow"><section class="card auth-card" aria-labelledby="login-title">
+    <header class="auth-card__header"><p class="eyebrow">Maker login</p><h1 id="login-title">다시 만나 반가워요</h1><p class="muted">만들던 게임을 이어서 완성하세요.</p></header>
+    <div class="alert alert--success" th:if="${registered}" role="status" style="margin-bottom:1rem"><span aria-hidden="true">✓</span><span>가입이 완료되었습니다. 새 계정으로 로그인해 주세요.</span></div>
+    <div class="alert alert--danger" th:if="${loginError}" role="alert" style="margin-bottom:1rem"><span aria-hidden="true">!</span><span>이메일 또는 비밀번호를 확인하세요.</span></div>
+    <form class="form-grid" th:action="@{/login}" method="post">
+        <div class="field"><label class="field__label" for="email">이메일</label><input class="input" id="email" type="email" name="email" th:value="${email}" autocomplete="username" required autofocus></div>
+        <div class="field"><label class="field__label" for="password">비밀번호</label><div class="input-wrap"><input class="input" id="password" type="password" name="password" autocomplete="current-password" required><button class="input-action" type="button" data-password-toggle aria-controls="password" aria-pressed="false">보기</button></div></div>
+        <label class="check"><input type="checkbox" name="rememberMe" value="true"><span>이 브라우저에서 로그인 유지</span></label>
+        <button class="btn btn--block" type="submit">로그인</button>
+    </form>
+    <footer class="auth-card__footer">처음이신가요? <a th:href="@{/signup}">메이커 계정 만들기</a></footer>
+</section></div></main>
+</body></html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>새 게임 · Findguni Maker</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+    <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: makerNav('new')}"></div>
+<main class="page-main" id="main-content">
+    <div class="container stack stack--lg">
+        <header>
+            <p class="eyebrow">New escape game</p>
+            <h1 class="page-title">어떤 이야기를 만들까요?</h1>
+            <p class="lede">14가지 템플릿에서 분위기와 플레이 상황에 맞는 뼈대를 고르세요. 모든 스테이지와 퍼즐은 나중에 바꿀 수 있습니다.</p>
+        </header>
+        <div class="alert alert--danger" th:if="${error}" role="alert"><span aria-hidden="true">!</span><span th:text="${error}">입력 내용을 확인하세요.</span></div>
+
+        <form class="stack stack--lg" th:action="@{/maker/games/new}" method="post">
+            <fieldset class="template-picker">
+                <legend class="section-title">1. 템플릿 선택</legend>
+                <div class="template-filter" role="toolbar" aria-label="템플릿 카테고리" data-template-filters>
+                    <button class="filter-chip" type="button" data-template-filter="all" aria-pressed="true">전체 14</button>
+                    <button class="filter-chip" type="button" data-template-filter="quick" aria-pressed="false">빠른 시작</button>
+                    <button class="filter-chip" type="button" data-template-filter="story" aria-pressed="false">스토리</button>
+                    <button class="filter-chip" type="button" data-template-filter="place" aria-pressed="false">장소·탐방</button>
+                    <button class="filter-chip" type="button" data-template-filter="event" aria-pressed="false">행사·팀</button>
+                    <button class="filter-chip" type="button" data-template-filter="kids" aria-pressed="false">어린이</button>
+                </div>
+                <p class="sr-only" aria-live="polite" data-template-status>14개 템플릿이 표시됩니다.</p>
+
+                <div class="template-gallery" data-template-gallery>
+                    <label class="template-card template-card--compact" data-template-card data-category="quick story">
+                        <input type="radio" name="template" value="BLANK">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">＋</span><span class="badge">고급</span></span><strong>빈 게임</strong><span class="template-description">아무것도 정하지 않은 자유로운 캔버스</span><span class="template-puzzles">추천 · 직접 구성</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="quick">
+                        <input type="radio" name="template" value="QUICK_10">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">⏱️</span><span class="badge badge--success">입문 추천</span></span><strong>10분 퀵게임</strong><span class="template-description">짧고 선명한 세 장면으로 빠르게 완성</span><span class="template-puzzles">숫자 휠 · 단답형</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story" data-featured>
+                        <input type="radio" name="template" value="MYSTERY_MANSION" checked>
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🏚️</span><span class="badge badge--accent">인기</span></span><strong>미스터리 저택</strong><span class="template-description">낡은 저택의 비밀을 방마다 추적하는 정통 구성</span><span class="template-puzzles">키패드 · 방향 · 아이템</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story">
+                        <input type="radio" name="template" value="DETECTIVE_CASE">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🕵️</span><span class="badge">추리</span></span><strong>탐정 사건 파일</strong><span class="template-description">증거를 모아 용의자와 범행 수법을 밝혀내기</span><span class="template-puzzles">객관식 · 단답형 · 단서장</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story place">
+                        <input type="radio" name="template" value="HORROR_HOSPITAL">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🏥</span><span class="badge badge--danger">공포</span></span><strong>폐병원 탈출</strong><span class="template-description">기록과 병실을 오가며 출구를 찾는 긴장감 있는 흐름</span><span class="template-puzzles">알파벳 휠 · 키패드</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story place">
+                        <input type="radio" name="template" value="TREASURE_HUNT">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🗺️</span><span class="badge">모험</span></span><strong>보물 사냥</strong><span class="template-description">지도와 나침반을 따라 보물 상자에 도착하기</span><span class="template-puzzles">방향 · 색상 · QR</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="place kids">
+                        <input type="radio" name="template" value="SCHOOL_MISSION">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🏫</span><span class="badge">교육</span></span><strong>학교 미션</strong><span class="template-description">교실과 복도에서 협력하며 푸는 교내 탐험</span><span class="template-puzzles">QR · 객관식 · 아이템</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="place">
+                        <input type="radio" name="template" value="MUSEUM_TOUR">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🏛️</span><span class="badge">도슨트</span></span><strong>박물관 탐방</strong><span class="template-description">전시물의 이야기를 따라 자연스럽게 공간을 관람</span><span class="template-puzzles">QR · 객관식 · 단서장</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story">
+                        <input type="radio" name="template" value="SCI_FI_LAB">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🧪</span><span class="badge">SF</span></span><strong>비밀 연구소</strong><span class="template-description">실험 기록을 복원해 통제 시스템을 해제하기</span><span class="template-puzzles">색상 · 키패드 · 알파벳</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="story kids">
+                        <input type="radio" name="template" value="FANTASY_QUEST">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🧙</span><span class="badge">판타지</span></span><strong>판타지 퀘스트</strong><span class="template-description">아이템을 모아 봉인된 마법의 문을 열기</span><span class="template-puzzles">아이템 · 알파벳 · 색상</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="place event">
+                        <input type="radio" name="template" value="OUTDOOR_TRAIL">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🥾</span><span class="badge">야외</span></span><strong>야외 트레일</strong><span class="template-description">공원과 동네 곳곳의 체크포인트를 따라 걷기</span><span class="template-puzzles">QR · 방향 · 사진 단서</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="event place">
+                        <input type="radio" name="template" value="FESTIVAL_EVENT">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🎪</span><span class="badge">행사</span></span><strong>축제 이벤트</strong><span class="template-description">부스마다 짧은 미션을 수행하는 회유형 이벤트</span><span class="template-puzzles">QR · 키패드 · 객관식</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="kids story">
+                        <input type="radio" name="template" value="KIDS_ADVENTURE">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🦖</span><span class="badge badge--success">어린이</span></span><strong>키즈 어드벤처</strong><span class="template-description">큰 버튼과 쉬운 힌트로 완성하는 첫 모험</span><span class="template-puzzles">색상 · 방향 · 객관식</span></span>
+                    </label>
+                    <label class="template-card template-card--compact" data-template-card data-category="event quick">
+                        <input type="radio" name="template" value="TEAM_RACE">
+                        <span class="template-card__content"><span class="template-card__top"><span class="template-icon" aria-hidden="true">🏁</span><span class="badge badge--warning">팀 빌딩</span></span><strong>팀 레이스</strong><span class="template-description">여러 팀이 같은 미션 기록에 도전하는 빠른 구성</span><span class="template-puzzles">혼합 퍼즐 · QR · 타임어택</span></span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="card card__body flow-mode-picker">
+                <legend class="section-title">2. 진행 방식</legend>
+                <div class="flow-mode-grid">
+                    <label class="flow-mode-card"><input type="radio" name="flowMode" value="QR_EXPLORATION" checked><span aria-hidden="true">▣</span><strong>QR 탐색형 <small>추천</small></strong><p>현장 곳곳의 QR을 찾아 문제와 단서를 자유롭게 발견합니다.</p></label>
+                    <label class="flow-mode-card"><input type="radio" name="flowMode" value="LINEAR"><span aria-hidden="true">→</span><strong>선형 진행형</strong><p>문제와 이야기를 제작자가 정한 순서대로 진행합니다.</p></label>
+                </div>
+            </fieldset>
+
+            <section class="card card__body form-grid" aria-labelledby="new-game-info">
+                <h2 class="section-title" id="new-game-info">3. 기본 정보</h2>
+                <div class="field"><label class="field__label" for="title">게임 제목</label><input class="input" id="title" name="title" th:value="${game != null ? game.title : ''}" maxlength="120" placeholder="예: 사라진 천문학자의 서재" required autofocus></div>
+                <div class="field"><label class="field__label" for="slug">플레이 주소(선택)</label><input class="input" id="slug" name="slug" th:value="${game != null ? game.slug : ''}" maxlength="70" pattern="[a-z0-9-]+" placeholder="비워두면 제목으로 자동 생성"></div>
+                <div class="inline-note">소개, 플레이 도구, 공개 범위와 커스텀 색상은 게임 생성 직후 빌더에서 설정합니다.</div>
+                <div class="form-grid form-grid--2">
+                    <div class="field"><label class="field__label" for="theme">테마</label><select class="select" id="theme" name="theme"><option value="MIDNIGHT">미드나잇 · 깊은 밤</option><option value="MANSION">맨션 · 고풍 저택</option><option value="LAB">랩 · 비밀 연구소</option><option value="FOREST">포레스트 · 미지의 숲</option><option value="RETRO">레트로 · 아케이드</option></select></div>
+                    <div class="field"><label class="field__label" for="difficulty">난이도</label><select class="select" id="difficulty" name="difficulty"><option value="EASY">쉬움</option><option value="NORMAL" selected>보통</option><option value="HARD">어려움</option><option value="EXPERT">전문가</option></select></div>
+                    <div class="field"><label class="field__label" for="estimatedMinutes">예상 시간(분)</label><input class="input" id="estimatedMinutes" type="number" name="estimatedMinutes" value="30" min="5" max="240" inputmode="numeric" required></div>
+                </div>
+            </section>
+            <div class="button-row" style="justify-content:flex-end"><a class="btn btn--secondary" th:href="@{/maker}">취소</a><button class="btn" type="submit">게임 만들고 편집하기</button></div>
+        </form>
+    </div>
+</main>
+</body>
+</html>

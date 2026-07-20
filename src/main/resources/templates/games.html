@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>게임 둘러보기 · Findguni</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"><script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: publicNav('games')}"></div>
+<main class="page-main" id="main-content">
+    <div class="container">
+        <header><p class="eyebrow">Play without signup</p><h1 class="page-title">공개 방탈출</h1><p class="lede">마음에 드는 이야기를 골라 로그인 없이 바로 플레이하세요.</p></header>
+        <form class="filter-bar" th:action="@{/games}" method="get" role="search">
+            <div class="field"><label class="field__label" for="game-search">게임 검색</label><input class="input" id="game-search" type="search" name="q" th:value="${q}" placeholder="제목이나 메이커 이름"></div>
+            <div class="field"><label class="field__label" for="difficulty-filter">난이도</label><select class="select" id="difficulty-filter" name="difficulty"><option value="">전체 난이도</option><option value="EASY" th:selected="${difficulty == 'EASY'}">쉬움</option><option value="NORMAL" th:selected="${difficulty == 'NORMAL'}">보통</option><option value="HARD" th:selected="${difficulty == 'HARD'}">어려움</option><option value="EXPERT" th:selected="${difficulty == 'EXPERT'}">전문가</option></select></div>
+            <button class="btn" type="submit">찾기</button>
+        </form>
+        <div class="empty-state" th:if="${games == null or #lists.isEmpty(games)}"><div class="empty-state__icon" aria-hidden="true">?</div><h2>조건에 맞는 게임이 없어요</h2><p>검색어를 바꾸거나 전체 난이도로 다시 찾아보세요.</p><a class="btn btn--secondary" th:href="@{/games}">필터 초기화</a></div>
+        <section class="game-grid" th:unless="${games == null or #lists.isEmpty(games)}" aria-label="공개 게임 목록">
+            <article class="card game-card" th:each="game : ${games}">
+                <div class="game-card__cover"><img th:if="${game.coverImageUrl != null and !#strings.isEmpty(game.coverImageUrl)}" th:src="${game.coverImageUrl}" th:alt="|${game.title} 표지|"><span th:unless="${game.coverImageUrl != null and !#strings.isEmpty(game.coverImageUrl)}" aria-hidden="true">F</span></div>
+                <div class="game-card__body">
+                    <div class="cluster"><span class="badge badge--accent" th:text="${game.difficulty != null ? game.difficulty.displayName : '보통'}">보통</span><span class="badge" th:text="|${game.estimatedMinutes}분|">30분</span></div>
+                    <h2 class="game-card__title" th:text="${game.title}">게임 제목</h2><p class="game-card__summary" th:text="${game.summary}">게임 소개</p>
+                    <p class="muted" style="font-size:.78rem" th:if="${game.owner != null}" th:text="|by ${game.owner.displayName}|">by 메이커</p>
+                    <a class="btn btn--block" th:href="@{/play/{slug}(slug=${game.slug})}">게임 보기</a>
+                </div>
+            </article>
+        </section>
+    </div>
+</main>
+</body>
+</html>

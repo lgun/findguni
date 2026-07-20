@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${game.title} 편집 · Findguni Maker|">게임 편집 · Findguni Maker</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+    <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: makerNav('builder')}"></div>
+<main class="builder-shell" id="main-content">
+    <div class="alert alert--success" th:if="${success}" role="status" style="margin-bottom:1rem">
+        <span aria-hidden="true">✓</span><span th:text="${success}">저장했습니다.</span>
+        <button class="alert__close" type="button" data-dismiss aria-label="알림 닫기">×</button>
+    </div>
+    <div class="alert alert--danger" th:if="${error}" role="alert" style="margin-bottom:1rem">
+        <span aria-hidden="true">!</span><span th:text="${error}">문제가 발생했습니다.</span>
+    </div>
+
+    <header class="builder-topbar">
+        <div>
+            <div class="cluster">
+                <a class="btn btn--quiet btn--small" th:href="@{/maker}" aria-label="내 게임으로 돌아가기">←</a>
+                <div>
+                    <h1 th:text="${game.title}">게임 제목</h1>
+                    <div class="builder-status">
+                        <span class="badge badge--success" th:if="${game.status != null and game.status.name() == 'PUBLISHED'}">발행 중</span>
+                        <span class="badge badge--warning" th:unless="${game.status != null and game.status.name() == 'PUBLISHED'}">초안</span>
+                        <span th:if="${game.updatedAt != null}" th:text="|${#temporals.format(game.updatedAt, 'M월 d일 HH:mm')} 저장|">방금 저장</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="button-row">
+            <a class="btn btn--secondary btn--small" th:if="${game.status != null and game.status.name() == 'PUBLISHED'}" th:href="@{/play/{slug}(slug=${game.slug})}" target="_blank" rel="noopener">플레이 미리보기</a>
+            <button class="btn btn--small" type="button" data-builder-jump="publish">발행 준비</button>
+        </div>
+    </header>
+
+    <div class="builder-tabs" role="tablist" aria-label="게임 편집 영역" data-builder-tabs>
+        <button class="builder-tab" type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="true" data-tab="settings">설정·테마</button>
+        <button class="builder-tab" type="button" role="tab" id="tab-stages" aria-controls="panel-stages" aria-selected="false" data-tab="stages">QR·문제</button>
+        <button class="builder-tab" type="button" role="tab" id="tab-items" aria-controls="panel-items" aria-selected="false" data-tab="items">QR 단서·아이템</button>
+        <button class="builder-tab" type="button" role="tab" id="tab-publish" aria-controls="panel-publish" aria-selected="false" data-tab="publish">발행·QR</button>
+    </div>
+
+    <div class="builder-layout" style="margin-top:1rem">
+        <div class="builder-main">
+            <section class="builder-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
+                <form class="card builder-section form-grid" th:action="@{/maker/games/{id}/edit(id=${game.id})}" method="post" enctype="multipart/form-data">
+                    <div class="builder-section__head">
+                        <div><h2>게임 기본 정보</h2><p>플레이 링크 첫 화면에 그대로 표시됩니다.</p></div>
+                        <button class="btn btn--small" type="submit">설정 저장</button>
+                    </div>
+                    <fieldset class="flow-mode-picker">
+                        <legend class="field__label">게임 진행 방식</legend>
+                        <div class="flow-mode-grid">
+                            <label class="flow-mode-card"><input type="radio" name="flowMode" value="QR_EXPLORATION" th:checked="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}"><span aria-hidden="true">▣</span><strong>QR 탐색형 <small>기본</small></strong><p>현장의 QR을 자유롭게 찾아 문제와 단서를 발견합니다.</p></label>
+                            <label class="flow-mode-card"><input type="radio" name="flowMode" value="LINEAR" th:checked="${game.flowMode != null and game.flowMode.name() == 'LINEAR'}"><span aria-hidden="true">→</span><strong>선형 진행형</strong><p>메이커가 정한 순서대로 이야기와 문제가 이어집니다.</p></label>
+                        </div>
+                        <p class="field__hint">QR 탐색형에서는 문제마다 인쇄용 QR을 발급합니다. 선형 진행형은 기존 방식처럼 순서를 사용합니다.</p>
+                    </fieldset>
+                    <div class="field">
+                        <label class="field__label" for="game-title">게임 제목</label>
+                        <input class="input" id="game-title" name="title" th:value="${game.title}" maxlength="60" required autocomplete="off" data-preview-text="preview-game-title preview-header-title" data-preview-fallback="게임 제목">
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="game-icon">게임 아이콘</label>
+                        <div class="icon-input-row"><span class="item-icon" id="game-icon-sample" aria-hidden="true" th:text="${game.gameIcon != null ? game.gameIcon : '🔐'}">🔐</span><input class="input" id="game-icon" name="gameIcon" th:value="${game.gameIcon}" maxlength="16" placeholder="🔐" data-preview-text="game-icon-sample preview-game-icon-display preview-header-icon" data-preview-fallback="🔐"></div>
+                        <div th:replace="~{fragments/controls :: emojiPicker('game-icon')}"></div>
+                        <span class="field__hint">프리셋을 고르거나 원하는 이모지를 직접 붙여 넣으세요.</span>
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="game-slug">플레이 주소</label>
+                        <div class="input-wrap"><input class="input" id="game-slug" name="slug" th:value="${game.slug}" maxlength="70" pattern="[a-z0-9-]+" required autocomplete="off"></div>
+                        <span class="field__hint">영문 소문자, 숫자, 하이픈만 사용하세요. 발행 후 변경하면 기존 공유 링크도 바뀝니다.</span>
+                    </div>
+                    <div class="field">
+                        <div class="spread"><label class="field__label" for="game-summary">한 줄 소개</label><span class="field__hint"><span id="summary-count">0</span>/140</span></div>
+                        <textarea class="textarea" id="game-summary" name="summary" maxlength="140" data-count="summary-count" data-preview-text="preview-game-summary" data-preview-fallback="한 줄 소개가 여기에 표시됩니다." th:text="${game.summary}" placeholder="플레이어가 궁금해할 이야기의 시작을 알려주세요."></textarea>
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="game-intro">시작 안내</label>
+                        <textarea class="textarea" id="game-intro" name="intro" th:text="${game.intro}" placeholder="세계관, 준비물, 플레이 방법을 적어주세요."></textarea>
+                        <span class="field__hint">일반 텍스트로 표시되며 HTML은 실행되지 않습니다.</span>
+                    </div>
+                    <div class="form-grid form-grid--2">
+                        <div class="field">
+                            <label class="field__label" for="game-difficulty">난이도</label>
+                            <select class="select" id="game-difficulty" name="difficulty" data-preview-option="preview-game-difficulty">
+                                <option value="EASY" th:selected="${game.difficulty != null and game.difficulty.name() == 'EASY'}">쉬움</option>
+                                <option value="NORMAL" th:selected="${game.difficulty != null and game.difficulty.name() == 'NORMAL'}">보통</option>
+                                <option value="HARD" th:selected="${game.difficulty != null and game.difficulty.name() == 'HARD'}">어려움</option>
+                                <option value="EXPERT" th:selected="${game.difficulty != null and game.difficulty.name() == 'EXPERT'}">전문가</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label class="field__label" for="game-minutes">예상 시간(분)</label>
+                            <input class="input" id="game-minutes" type="number" name="estimatedMinutes" th:value="${game.estimatedMinutes}" min="5" max="240" inputmode="numeric" required data-preview-value="preview-game-minutes" data-preview-suffix="분">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field__label">공개 범위</span>
+                        <div class="segmented">
+                            <label><input type="radio" name="visibility" value="LINK_ONLY" th:checked="${game.visibility == null or game.visibility.name() == 'LINK_ONLY'}">링크 공개</label>
+                            <label><input type="radio" name="visibility" value="PUBLIC" th:checked="${game.visibility != null and game.visibility.name() == 'PUBLIC'}">목록 공개</label>
+                        </div>
+                        <span class="field__hint">링크 공개는 주소를 아는 사람만, 목록 공개는 게임 둘러보기에 함께 노출됩니다.</span>
+                    </div>
+
+                    <section class="theme-studio" aria-labelledby="theme-studio-title">
+                        <div class="builder-section__head theme-studio__head">
+                            <div><h2 id="theme-studio-title">테마 스튜디오</h2><p>테마와 색을 바꾸면서 실제 모바일 시작 화면과 진행 화면을 바로 확인하세요.</p></div>
+                            <span class="live-indicator"><span aria-hidden="true"></span>실시간 미리보기</span>
+                        </div>
+                        <div class="theme-studio__layout">
+                            <div class="theme-studio__controls">
+                                <div class="field">
+                                    <label class="field__label" for="game-theme">테마 프리셋</label>
+                                    <select class="select" id="game-theme" name="theme" data-theme-select>
+                                        <option value="MIDNIGHT" th:selected="${game.theme != null and game.theme.name() == 'MIDNIGHT'}">미드나잇 · 깊은 밤</option>
+                                        <option value="MANSION" th:selected="${game.theme != null and game.theme.name() == 'MANSION'}">맨션 · 고풍 저택</option>
+                                        <option value="LAB" th:selected="${game.theme != null and game.theme.name() == 'LAB'}">랩 · 비밀 연구소</option>
+                                        <option value="FOREST" th:selected="${game.theme != null and game.theme.name() == 'FOREST'}">포레스트 · 미지의 숲</option>
+                                        <option value="RETRO" th:selected="${game.theme != null and game.theme.name() == 'RETRO'}">레트로 · 아케이드</option>
+                                    </select>
+                                </div>
+                                <div class="theme-choice-grid" role="group" aria-label="테마 빠른 선택">
+                                    <button class="theme-choice" type="button" data-theme-choice="MIDNIGHT" data-preset-accent="#8D7CFF" data-preset-secondary="#EC4899" data-preset-background="#080B17" aria-pressed="false"><span class="theme-choice__palette" aria-hidden="true"><i style="--swatch:#8D7CFF"></i><i style="--swatch:#EC4899"></i><i style="--swatch:#080B17"></i></span><strong>미드나잇</strong><small>깊은 밤</small></button>
+                                    <button class="theme-choice" type="button" data-theme-choice="MANSION" data-preset-accent="#D9A441" data-preset-secondary="#A64832" data-preset-background="#18100F" aria-pressed="false"><span class="theme-choice__palette" aria-hidden="true"><i style="--swatch:#D9A441"></i><i style="--swatch:#A64832"></i><i style="--swatch:#18100F"></i></span><strong>맨션</strong><small>고풍 저택</small></button>
+                                    <button class="theme-choice" type="button" data-theme-choice="LAB" data-preset-accent="#067F7A" data-preset-secondary="#58C5BD" data-preset-background="#EFF9F8" aria-pressed="false"><span class="theme-choice__palette" aria-hidden="true"><i style="--swatch:#067F7A"></i><i style="--swatch:#58C5BD"></i><i style="--swatch:#EFF9F8"></i></span><strong>랩</strong><small>비밀 연구소</small></button>
+                                    <button class="theme-choice" type="button" data-theme-choice="FOREST" data-preset-accent="#8ABB59" data-preset-secondary="#D4A85F" data-preset-background="#0E1A14" aria-pressed="false"><span class="theme-choice__palette" aria-hidden="true"><i style="--swatch:#8ABB59"></i><i style="--swatch:#D4A85F"></i><i style="--swatch:#0E1A14"></i></span><strong>포레스트</strong><small>미지의 숲</small></button>
+                                    <button class="theme-choice" type="button" data-theme-choice="RETRO" data-preset-accent="#E95348" data-preset-secondary="#2E9D91" data-preset-background="#FFF2CF" aria-pressed="false"><span class="theme-choice__palette" aria-hidden="true"><i style="--swatch:#E95348"></i><i style="--swatch:#2E9D91"></i><i style="--swatch:#FFF2CF"></i></span><strong>레트로</strong><small>아케이드</small></button>
+                                </div>
+                                <div class="preset-action">
+                                    <p>프리셋을 골라도 아래의 커스텀 색상은 유지됩니다.</p>
+                                    <button class="btn btn--secondary btn--small" type="button" data-theme-palette-apply>선택 테마의 기본색 적용</button>
+                                </div>
+                                <div class="color-grid" aria-label="커스텀 색상">
+                                    <div class="field" data-color-pair data-css-variable="--accent">
+                                        <label class="field__label" for="accent-color">강조 색상</label>
+                                        <div class="color-input-row"><input type="color" th:value="${game.accentColor != null ? game.accentColor : '#635bff'}" aria-label="강조 색상 선택"><input class="input" id="accent-color" name="accentColor" th:value="${game.accentColor != null ? game.accentColor : '#635bff'}" pattern="#[0-9A-Fa-f]{6}" placeholder="#635BFF" aria-describedby="accent-color-error"></div>
+                                        <small class="field-error" id="accent-color-error" data-color-error hidden>예: #635BFF처럼 6자리 HEX 값을 입력하세요.</small>
+                                    </div>
+                                    <div class="field" data-color-pair data-css-variable="--accent-secondary">
+                                        <label class="field__label" for="secondary-color">보조 색상</label>
+                                        <div class="color-input-row"><input type="color" th:value="${game.secondaryColor != null ? game.secondaryColor : '#EC4899'}" aria-label="보조 색상 선택"><input class="input" id="secondary-color" name="secondaryColor" th:value="${game.secondaryColor != null ? game.secondaryColor : '#EC4899'}" pattern="#[0-9A-Fa-f]{6}" placeholder="#EC4899" aria-describedby="secondary-color-error"></div>
+                                        <small class="field-error" id="secondary-color-error" data-color-error hidden>예: #EC4899처럼 6자리 HEX 값을 입력하세요.</small>
+                                    </div>
+                                    <div class="field" data-color-pair data-css-variable="--game-bg">
+                                        <label class="field__label" for="background-color">배경 색상</label>
+                                        <div class="color-input-row"><input type="color" th:value="${game.backgroundColor != null ? game.backgroundColor : '#080B17'}" aria-label="배경 색상 선택"><input class="input" id="background-color" name="backgroundColor" th:value="${game.backgroundColor != null ? game.backgroundColor : '#080B17'}" pattern="#[0-9A-Fa-f]{6}" placeholder="#080B17" aria-describedby="background-color-error"></div>
+                                        <small class="field-error" id="background-color-error" data-color-error hidden>예: #080B17처럼 6자리 HEX 값을 입력하세요.</small>
+                                    </div>
+                                </div>
+                                <span class="field__hint">색상 버튼과 HEX 값이 함께 바뀌며 저장 전에도 즉시 미리보기에 반영됩니다.</span>
+                            </div>
+
+                            <div class="maker-preview" aria-label="플레이어 모바일 화면 미리보기">
+                                <div class="maker-preview__toolbar">
+                                    <div><strong data-preview-theme-name>미드나잇</strong><small>플레이어 화면</small></div>
+                                    <div class="preview-mode-tabs" role="tablist" aria-label="미리보기 화면 선택">
+                                        <button type="button" role="tab" data-preview-mode="landing" aria-selected="true">시작</button>
+                                        <button type="button" role="tab" data-preview-mode="stage" aria-selected="false">진행</button>
+                                    </div>
+                                </div>
+                                <div class="preview-phone" data-theme-preview data-maker-preview th:attr="data-theme=${game.theme != null ? game.theme.name() : 'MIDNIGHT'}" th:style="|--accent:${game.accentColor};--accent-secondary:${game.secondaryColor};--game-bg:${game.backgroundColor};|">
+                                    <div class="preview-phone__screen">
+                                        <header class="preview-player-header"><span id="preview-header-icon" th:text="${game.gameIcon != null ? game.gameIcon : '🔐'}">🔐</span><strong id="preview-header-title" th:text="${game.title != null ? game.title : '게임 제목'}">게임 제목</strong><span aria-hidden="true">♫</span></header>
+                                        <div data-preview-panel="landing">
+                                            <div class="preview-phone__cover" data-cover-preview>
+                                                <div><span class="preview-game-icon" id="preview-game-icon-display" th:text="${game.gameIcon != null ? game.gameIcon : '🔐'}">🔐</span><span class="preview-difficulty" id="preview-game-difficulty" th:text="${game.difficulty != null ? game.difficulty : 'NORMAL'}">보통</span><h2 id="preview-game-title" th:text="${game.title != null ? game.title : '게임 제목'}">게임 제목</h2></div>
+                                            </div>
+                                            <div class="preview-phone__body">
+                                                <p class="preview-summary" id="preview-game-summary" th:text="${game.summary != null ? game.summary : '한 줄 소개가 여기에 표시됩니다.'}">게임 소개</p>
+                                                <div class="preview-facts"><span>⏱ <strong id="preview-game-minutes" th:text="|${game.estimatedMinutes != null ? game.estimatedMinutes : 60}분|">60분</strong></span><span>👥 1~6명</span></div>
+                                                <div class="preview-tool-row"><span id="preview-tool-notebook" th:hidden="${!game.allowNotebook}">📝 메모</span><span id="preview-tool-cluebook" th:hidden="${!game.allowCluebook}">🗂 단서</span><span id="preview-tool-scanner" th:hidden="${!game.allowQrScanner}">▣ QR</span></div>
+                                                <span class="preview-primary-action">게임 시작</span>
+                                            </div>
+                                        </div>
+                                        <div data-preview-panel="stage" hidden>
+                                            <div class="preview-stage">
+                                                <div class="preview-stage__progress"><span>STAGE 02</span><strong>40%</strong></div>
+                                                <div class="preview-story-card"><small>발견한 기록</small><p>잠긴 서랍 위에 숫자가 희미하게 빛나고 있습니다.</p></div>
+                                                <div class="preview-puzzle-card"><span aria-hidden="true">🔒</span><div><small>숫자 자물쇠</small><strong>기록 속 네 자리 암호</strong></div></div>
+                                                <div class="preview-number-lock" aria-label="숫자 자물쇠 예시"><span>0</span><span>4</span><span>2</span><span>7</span></div>
+                                                <span class="preview-primary-action">자물쇠 열기</span>
+                                            </div>
+                                            <div class="preview-tool-dock"><span id="preview-stage-tool-notebook" th:hidden="${!game.allowNotebook}">📝<small>메모</small></span><span id="preview-stage-tool-cluebook" th:hidden="${!game.allowCluebook}">🗂<small>단서</small></span><span id="preview-stage-tool-scanner" th:hidden="${!game.allowQrScanner}">▣<small>QR</small></span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="preview-palette" aria-label="현재 적용 색상"><span><i data-preview-color="--accent"></i><small>강조</small></span><span><i data-preview-color="--accent-secondary"></i><small>보조</small></span><span><i data-preview-color="--game-bg"></i><small>배경</small></span></div>
+                                <p class="preview-contrast" data-preview-contrast role="status">색상 대비를 확인하고 있습니다.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="tool-settings" aria-labelledby="player-tools-title">
+                        <div class="builder-section__head"><div><h2 id="player-tools-title">플레이 도구</h2><p>게임 화면 하단에서 플레이어가 사용할 도구를 고르세요.</p></div></div>
+                        <label class="tool-toggle"><span><strong>메모장</strong><small>생각과 암호 후보를 기기에 연결해 저장</small></span><input type="checkbox" name="allowNotebook" value="true" th:checked="${game.allowNotebook}" data-toggle-checkbox data-tool-preview="preview-tool-notebook preview-stage-tool-notebook"><input type="hidden" name="allowNotebook" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                        <label class="tool-toggle"><span><strong>단서장</strong><small>QR로 발견한 단서와 이미지를 다시 열람</small></span><input type="checkbox" name="allowCluebook" value="true" th:checked="${game.allowCluebook}" data-toggle-checkbox data-tool-preview="preview-tool-cluebook preview-stage-tool-cluebook"><input type="hidden" name="allowCluebook" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                        <label class="tool-toggle"><span><strong>QR 스캐너</strong><small>게임을 나가지 않고 현장 QR을 카메라로 스캔</small></span><input type="checkbox" name="allowQrScanner" value="true" th:checked="${game.allowQrScanner}" data-toggle-checkbox data-tool-preview="preview-tool-scanner preview-stage-tool-scanner"><input type="hidden" name="allowQrScanner" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                    </section>
+
+                    <section class="sound-settings" aria-labelledby="sound-settings-title">
+                        <div class="builder-section__head">
+                            <div><h2 id="sound-settings-title">사운드·연출</h2><p>게임 전체에 흐르는 배경 음악과 이야기 표시 속도를 설정하세요.</p></div>
+                        </div>
+                        <div class="audio-upload-card">
+                            <div class="field">
+                                <label class="field__label" for="game-bgm-file">BGM 직접 업로드</label>
+                                <input class="file-input" id="game-bgm-file" type="file" name="bgmFile"
+                                       accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav" data-audio-upload-for="game-bgm">
+                                <span class="field__hint">MP3, OGG, WAV 파일을 사용할 수 있습니다.</span>
+                            </div>
+                            <div class="current-audio" th:if="${game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)}">
+                                <strong>현재 BGM</strong>
+                                <audio controls preload="none" th:src="${game.bgmUrl}">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+                                <label class="check-row"><input type="checkbox" name="removeBgm" value="true" data-audio-remove-for="game-bgm"> 현재 BGM 삭제</label>
+                            </div>
+                        </div>
+                        <div th:replace="~{fragments/audio :: openversePicker('game-bgm','bgm','BGM','배경 음악',${game.bgmUrl},${game.bgmTitle},${game.bgmCreator},${game.bgmLicense},${game.bgmLicenseUrl},${game.bgmSourceUrl})}"></div>
+                        <div class="form-grid form-grid--2 sound-control-grid">
+                            <div class="field">
+                                <div class="spread"><label class="field__label" for="bgm-volume">BGM 볼륨</label><output for="bgm-volume" data-range-output>55%</output></div>
+                                <input class="range" id="bgm-volume" type="range" name="bgmVolume" min="0" max="1" step="0.05" th:value="${game.bgmVolume}" data-volume-range>
+                            </div>
+                            <div class="field">
+                                <div class="spread"><label class="field__label" for="story-text-speed">타자기 효과 속도</label><output for="story-text-speed" data-story-speed-output>32ms/글자</output></div>
+                                <input class="range" id="story-text-speed" type="range" name="storyTextSpeed" min="10" max="100" step="1" th:value="${game.storyTextSpeed}" data-story-speed-range>
+                                <span class="field__hint">값이 작을수록 이야기가 빠르게 나타납니다.</span>
+                            </div>
+                        </div>
+                        <div class="sound-toggle-grid">
+                            <label class="tool-toggle"><span><strong>BGM 반복 재생</strong><small>게임을 마칠 때까지 음악을 이어서 반복합니다.</small></span><input type="checkbox" name="bgmLoop" value="true" th:checked="${game.bgmLoop}" data-toggle-checkbox><input type="hidden" name="bgmLoop" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                            <label class="tool-toggle"><span><strong>비네트 연출</strong><small>화면 가장자리를 어둡게 해 장면 집중도를 높입니다.</small></span><input type="checkbox" name="enableVignette" value="true" th:checked="${game.enableVignette}" data-toggle-checkbox><input type="hidden" name="enableVignette" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                        </div>
+                    </section>
+                    <div class="field">
+                        <label class="field__label" for="cover-image">표지 이미지 URL</label>
+                        <input class="input" id="cover-image" type="url" name="coverImageUrl" th:value="${game.coverImageUrl}" placeholder="https://example.com/cover.jpg" data-cover-input>
+                    </div>
+                </form>
+            </section>
+
+            <section class="builder-panel" id="panel-stages" role="tabpanel" aria-labelledby="tab-stages" hidden>
+                <div class="card builder-section">
+                    <div class="builder-section__head">
+                        <div><h2 th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '선형 문제 순서' : 'QR 문제 보드'}">QR 문제 보드</h2><p th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '위에서 아래 순서대로 진행됩니다. 문제 카드는 한 번에 하나만 열립니다.' : '문제마다 QR을 인쇄해 원하는 장소에 배치하세요. 플레이어는 순서 없이 발견하고 해결합니다.'}">문제마다 QR을 배치하세요.</p></div>
+                        <span class="badge" th:text="|${stages != null ? #lists.size(stages) : 0}개|">0개</span>
+                    </div>
+                    <div class="empty-state" th:if="${stages == null or #lists.isEmpty(stages)}">
+                        <div class="empty-state__icon" aria-hidden="true">▣</div>
+                        <h3>첫 문제를 추가하세요</h3>
+                        <p>제목과 유형만 고르면 바로 만들 수 있습니다. 세부 내용과 연출은 나중에 편집하세요.</p>
+                    </div>
+                    <div class="stage-workspace" data-stage-workspace th:unless="${stages == null or #lists.isEmpty(stages)}">
+                        <nav class="stage-index" aria-label="문제 목록">
+                            <a class="stage-index__item" data-stage-select th:each="stage, iter : ${stages}"
+                               th:href="@{/maker/games/{id}/edit(id=${game.id},tab='stages',edit=${stage.id})}"
+                               th:attr="data-stage-id=${stage.id},aria-controls=|stage-card-${stage.id}|,aria-current=${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first) ? 'true' : 'false'}"
+                               th:classappend="${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first)} ? ' is-active' : ''">
+                                <span class="stage-card__number" th:text="${iter.count}">1</span>
+                                <span class="stage-card__title">
+                                    <strong th:text="${stage.title}">문제 제목</strong>
+                                    <span><span th:text="${stage.puzzleType.displayName}">문제 유형</span><b th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}" th:text="| · ${stage.entryMode.displayName}|"> · QR로 발견</b></span>
+                                </span>
+                                <span class="badge badge--accent" th:if="${(game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION') and stage.qrEnabled}">QR</span>
+                            </a>
+                        </nav>
+
+                        <div class="stage-workspace__editors" data-stage-editors>
+                        <details class="card stage-card stage-editor-panel" data-stage-panel th:each="stage, iter : ${stages}" th:id="|stage-card-${stage.id}|"
+                                 th:attr="data-stage-id=${stage.id}" th:open="${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first)}">
+                            <summary class="stage-card__summary">
+                                <span class="stage-card__number" th:text="${iter.count}">1</span>
+                                <span class="stage-card__title">
+                                    <strong th:text="${stage.title}">스테이지 제목</strong>
+                                    <span><span th:text="${stage.puzzleType.displayName}">문제 유형</span><b th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}" th:text="| · ${stage.entryMode.displayName}|"> · QR로 발견</b></span>
+                                </span>
+                                <span class="cluster"><span class="badge badge--accent" th:if="${(game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION') and stage.qrEnabled}">QR</span><span class="stage-card__chevron" aria-hidden="true">⌄</span></span>
+                            </summary>
+                            <header class="stage-editor-context">
+                                <div><p class="eyebrow">선택한 문제</p><h3 th:text="${stage.title}">문제 제목</h3></div>
+                                <span class="badge" th:text="${stage.puzzleType.displayName}">문제 유형</span>
+                            </header>
+                            <form class="stage-card__form form-grid" th:id="|stage-edit-form-${stage.id}|" th:action="@{/maker/games/{gameId}/stages/{stageId}(gameId=${game.id},stageId=${stage.id})}" method="post" enctype="multipart/form-data">
+                                <section class="stage-qr-setting" th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}">
+                                    <div class="form-grid form-grid--2">
+                                        <div class="field">
+                                            <label class="field__label" th:for="|stage-entry-${stage.id}|">문제가 열리는 방식</label>
+                                            <select class="select" th:id="|stage-entry-${stage.id}|" name="entryMode">
+                                                <option th:each="mode : ${stageEntryModes}" th:value="${mode.name()}" th:text="${mode.displayName}" th:selected="${stage.entryMode == mode}">QR로 발견</option>
+                                            </select>
+                                            <span class="field__hint">시작 공개, QR 발견, 이전 문제에서만 연결 중 하나를 고르세요.</span>
+                                        </div>
+                                        <div class="field">
+                                            <label class="field__label" th:for="|stage-next-${stage.id}|">정답 후 이어질 문제</label>
+                                            <select class="select" th:id="|stage-next-${stage.id}|" name="nextStageKey">
+                                                <option value="">탐색 화면으로 돌아가기</option>
+                                                <option th:each="candidate : ${stages}" th:if="${candidate.id != stage.id}" th:value="${candidate.stableKey}" th:text="${candidate.title}" th:selected="${stage.nextStageKey != null and stage.nextStageKey == candidate.stableKey}">다음 문제</option>
+                                            </select>
+                                            <span class="field__hint">선택하면 정답 직후 해당 장면을 자동으로 엽니다.</span>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="qrEnabled" th:value="${stage.qrEnabled}">
+                                    <div class="stage-qr-export" th:if="${stage.entryMode.name() == 'QR'}">
+                                        <img th:src="@{/maker/games/{gameId}/stages/{stageId}/qr(gameId=${game.id},stageId=${stage.id})}" th:alt="|${stage.title} 문제 QR 코드|">
+                                        <div><strong>인쇄용 문제 QR</strong><p>이 QR을 스캔한 플레이어에게만 문제가 열립니다.</p><a class="btn btn--secondary btn--small" th:href="@{/maker/games/{gameId}/stages/{stageId}/qr(gameId=${game.id},stageId=${stage.id},download=true)}" download>QR 다운로드</a></div>
+                                    </div>
+                                </section>
+                                <div class="form-grid form-grid--2">
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-title-${stage.id}|">제목</label>
+                                        <input class="input" th:id="|stage-title-${stage.id}|" name="title" th:value="${stage.title}" maxlength="80" required>
+                                    </div>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-type-${stage.id}|">퍼즐 유형</label>
+                                        <select class="select" th:id="|stage-type-${stage.id}|" name="puzzleType" data-puzzle-type>
+                                            <option value="STORY" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'STORY'}">스토리</option>
+                                            <option value="NUMBER_LOCK" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'NUMBER_LOCK'}">숫자 휠</option>
+                                            <option value="KEYPAD" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'KEYPAD'}">숫자 키패드</option>
+                                            <option value="ALPHABET_LOCK" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'ALPHABET_LOCK'}">알파벳 휠</option>
+                                            <option value="DIRECTION_LOCK" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'DIRECTION_LOCK'}">방향 자물쇠</option>
+                                            <option value="COLOR_LOCK" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'COLOR_LOCK'}">색상 순서</option>
+                                            <option value="MULTIPLE_CHOICE" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'MULTIPLE_CHOICE'}">객관식</option>
+                                            <option value="TEXT_ANSWER" th:selected="${stage.puzzleType != null and stage.puzzleType.name() == 'TEXT_ANSWER'}">단답형</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" th:for="|stage-story-${stage.id}|">이야기</label>
+                                    <textarea class="textarea" th:id="|stage-story-${stage.id}|" name="story" th:text="${stage.story}" placeholder="플레이어가 읽을 장면과 단서를 적어주세요."></textarea>
+                                </div>
+                                <details class="advanced-editor">
+                                    <summary><span><strong>장면·효과음 연출</strong><small>사진, 등장 효과, Openverse 효과음</small></span><span aria-hidden="true">⌄</span></summary>
+                                    <div class="advanced-editor__body">
+                                <section class="stage-cinematic" th:attr="aria-labelledby=|stage-cinematic-title-${stage.id}|">
+                                    <div class="audio-picker__head"><div><strong th:id="|stage-cinematic-title-${stage.id}|">장면 연출</strong><p>장면 사진과 이야기 등장 효과를 선택하세요.</p></div><span class="badge">Scene</span></div>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-effect-${stage.id}|">이야기 효과</label>
+                                        <select class="select" th:id="|stage-effect-${stage.id}|" name="storyEffect">
+                                            <option value="NONE" th:selected="${stage.storyEffect == null or stage.storyEffect.name() == 'NONE'}">효과 없음</option>
+                                            <option value="FADE" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'FADE'}">페이드 인</option>
+                                            <option value="TYPEWRITER" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'TYPEWRITER'}">타자기</option>
+                                            <option value="GLITCH" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'GLITCH'}">글리치</option>
+                                            <option value="SHAKE" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'SHAKE'}">진동</option>
+                                            <option value="FLICKER" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'FLICKER'}">불빛 깜빡임</option>
+                                            <option value="SPOTLIGHT" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'SPOTLIGHT'}">스포트라이트</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-grid form-grid--2">
+                                        <div class="field">
+                                            <label class="field__label" th:for="|stage-scene-url-${stage.id}|">장면 이미지 URL</label>
+                                            <input class="input" th:id="|stage-scene-url-${stage.id}|" type="url" name="sceneImageUrl" th:value="${stage.sceneImageUrl}" placeholder="https://example.com/scene.jpg">
+                                        </div>
+                                        <div class="field">
+                                            <label class="field__label" th:for="|stage-scene-photo-${stage.id}|">장면 사진 업로드</label>
+                                            <input class="file-input" th:id="|stage-scene-photo-${stage.id}|" type="file" name="scenePhoto" accept="image/*" capture="environment" data-photo-input th:attr="data-photo-input=|stage-scene-preview-${stage.id}|,data-photo-upload-for=|stage-scene-${stage.id}|">
+                                        </div>
+                                    </div>
+                                    <div class="scene-image-preview" th:if="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}">
+                                        <img th:id="|stage-scene-preview-${stage.id}|" th:src="${stage.sceneImageUrl}" th:alt="|${stage.title} 현재 장면 이미지|">
+                                        <label class="check-row"><input type="checkbox" name="removeSceneImage" value="true" th:attr="data-photo-remove-for=|stage-scene-${stage.id}|"> 현재 장면 이미지 삭제</label>
+                                    </div>
+                                    <img class="scene-image-preview__image" th:unless="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}" th:id="|stage-scene-preview-${stage.id}|" alt="새 장면 이미지 미리보기" hidden>
+                                </section>
+                                <section class="stage-audio" th:attr="aria-labelledby=|stage-audio-title-${stage.id}|">
+                                    <div class="audio-picker__head"><div><strong th:id="|stage-audio-title-${stage.id}|">효과음</strong><p>이 스테이지가 열릴 때 한 번 재생할 소리를 고르세요.</p></div><span class="badge">SFX</span></div>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-sfx-file-${stage.id}|">효과음 직접 업로드</label>
+                                        <input class="file-input" th:id="|stage-sfx-file-${stage.id}|" type="file" name="sfxFile" accept=".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav" th:attr="data-audio-upload-for=|stage-sfx-${stage.id}|">
+                                    </div>
+                                    <div class="current-audio" th:if="${stage.sfxUrl != null and !#strings.isEmpty(stage.sfxUrl)}">
+                                        <audio controls preload="none" th:src="${stage.sfxUrl}">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+                                        <label class="check-row"><input type="checkbox" name="removeSfx" value="true" th:attr="data-audio-remove-for=|stage-sfx-${stage.id}|"> 현재 효과음 삭제</label>
+                                    </div>
+                                    <div th:replace="~{fragments/audio :: openversePicker(instanceId=${'stage-sfx-' + stage.id},fieldPrefix='sfx',kind='SFX',heading='효과음',urlValue=${stage.sfxUrl},titleValue=${stage.sfxTitle},creatorValue=${stage.sfxCreator},licenseValue=${stage.sfxLicense},licenseUrlValue=${stage.sfxLicenseUrl},sourceUrlValue=${stage.sfxSourceUrl})}"></div>
+                                    <div class="field">
+                                        <div class="spread"><label class="field__label" th:for="|stage-sfx-volume-${stage.id}|">효과음 볼륨</label><output th:for="|stage-sfx-volume-${stage.id}|" data-range-output>70%</output></div>
+                                        <input class="range" th:id="|stage-sfx-volume-${stage.id}|" type="range" name="sfxVolume" min="0" max="1" step="0.05" th:value="${stage.sfxVolume}" data-volume-range>
+                                    </div>
+                                </section>
+                                    </div>
+                                </details>
+                                <div class="field">
+                                    <label class="field__label" th:for="|stage-instruction-${stage.id}|">문제 안내</label>
+                                    <textarea class="textarea" th:id="|stage-instruction-${stage.id}|" name="instruction" th:text="${stage.instruction}" placeholder="무엇을 풀어야 하는지 짧게 안내하세요."></textarea>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" th:for="|stage-hint-${stage.id}|">힌트</label>
+                                    <textarea class="textarea" th:id="|stage-hint-${stage.id}|" name="hint" th:text="${stage.hint}" placeholder="막혔을 때 도움이 될 힌트를 적어주세요."></textarea>
+                                </div>
+                                <div class="form-grid form-grid--2">
+                                    <div class="field" data-types="NUMBER_LOCK,KEYPAD,ALPHABET_LOCK,DIRECTION_LOCK,COLOR_LOCK">
+                                        <label class="field__label" th:for="|stage-length-${stage.id}|">자물쇠 길이</label>
+                                        <input class="input" th:id="|stage-length-${stage.id}|" type="number" name="lockLength" th:value="${stage.lockLength}" min="2" max="8" inputmode="numeric">
+                                    </div>
+                                    <div class="field" data-types="NUMBER_LOCK,KEYPAD,ALPHABET_LOCK,DIRECTION_LOCK,COLOR_LOCK,MULTIPLE_CHOICE,TEXT_ANSWER">
+                                        <label class="field__label" th:for="|stage-answer-${stage.id}|">정답</label>
+                                        <input class="input" th:id="|stage-answer-${stage.id}|" name="draftAnswer" th:value="${stage.draftAnswer}" autocomplete="off">
+                                        <span class="field__hint">방향·색상은 순서를 쉼표로 구분하세요.</span>
+                                    </div>
+                                </div>
+                                <div class="field" data-types="MULTIPLE_CHOICE">
+                                    <label class="field__label" th:for="|stage-options-${stage.id}|">선택지</label>
+                                    <textarea class="textarea" th:id="|stage-options-${stage.id}|" name="optionsText" th:text="${stage.optionsText}" placeholder="선택지를 한 줄에 하나씩 입력하세요."></textarea>
+                                </div>
+                                <div class="form-grid form-grid--2">
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-required-${stage.id}|">필요 아이템</label>
+                                        <select class="select" th:id="|stage-required-${stage.id}|" name="requiredItemId">
+                                            <option value="">없음</option>
+                                            <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}" th:selected="${stage.requiredItem != null and stage.requiredItem == item.stableKey}">아이템</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|stage-reward-${stage.id}|">획득 아이템</label>
+                                        <select class="select" th:id="|stage-reward-${stage.id}|" name="rewardItemId">
+                                            <option value="">없음</option>
+                                            <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}" th:selected="${stage.rewardItem != null and stage.rewardItem == item.stableKey}">아이템</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="stage-actions">
+                                <button class="btn btn--small" type="submit" th:attr="form=|stage-edit-form-${stage.id}|">문제 저장</button>
+                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="up"><button class="btn btn--secondary btn--small" type="submit" aria-label="위로 이동">↑ 위로</button></form>
+                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="down"><button class="btn btn--secondary btn--small" type="submit" aria-label="아래로 이동">↓ 아래로</button></form>
+                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/delete(gameId=${game.id},stageId=${stage.id})}" method="post"><button class="btn btn--quiet btn--small" type="submit" data-confirm="이 문제를 삭제할까요? 연결된 진행 흐름을 다시 확인해야 합니다.">삭제</button></form>
+                            </div>
+                        </details>
+                        </div>
+
+                    <details class="card stage-quick-create">
+                        <summary class="stage-card__summary">
+                            <span class="stage-card__number" aria-hidden="true">＋</span>
+                            <span class="stage-card__title"><strong>새 문제 추가</strong><span>제목과 퍼즐 유형만 고르면 바로 생성됩니다.</span></span>
+                            <span class="stage-card__chevron" aria-hidden="true">⌄</span>
+                        </summary>
+                        <form class="stage-card__form form-grid" th:action="@{/maker/games/{id}/stages(id=${game.id})}" method="post" enctype="multipart/form-data">
+                            <div class="form-grid form-grid--2">
+                                <div class="field"><label class="field__label" for="new-stage-title">제목</label><input class="input" id="new-stage-title" name="title" maxlength="80" required placeholder="예: 잠긴 서재"></div>
+                                <div class="field">
+                                    <label class="field__label" for="new-stage-type">퍼즐 유형</label>
+                                    <select class="select" id="new-stage-type" name="puzzleType" required>
+                                        <option value="STORY">스토리</option><option value="NUMBER_LOCK">숫자 휠</option><option value="KEYPAD">숫자 키패드</option><option value="ALPHABET_LOCK">알파벳 휠</option><option value="DIRECTION_LOCK">방향 자물쇠</option><option value="COLOR_LOCK">색상 순서</option><option value="MULTIPLE_CHOICE">객관식</option><option value="TEXT_ANSWER">단답형</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label class="tool-toggle" th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}"><span><strong>문제 QR 발급</strong><small>저장 즉시 다운로드할 수 있습니다.</small></span><input type="checkbox" name="qrEnabled" value="true" checked data-toggle-checkbox><input type="hidden" name="qrEnabled" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                            <input type="hidden" name="entryMode" value="QR">
+                            <div class="quick-create-note"><span aria-hidden="true">⚡</span><p><strong>빠른 생성</strong> 제목과 유형만으로 먼저 추가합니다. 이야기, 정답, 사진, 효과음은 생성 후 선택한 문제 카드에서 편집하세요.</p></div>
+                            <button class="btn" type="submit">문제 만들고 편집하기</button>
+                        </form>
+                    </details>
+                    </div>
+                </div>
+            </section>
+
+            <section class="builder-panel" id="panel-items" role="tabpanel" aria-labelledby="tab-items" hidden>
+                <div class="card builder-section">
+                    <div class="builder-section__head"><div><h2>QR 단서·아이템</h2><p>QR을 스캔해 얻는 단서를 기본으로 만들고, 필요하면 열쇠와 도구로 문제 조건에 연결하세요.</p></div><span class="badge" th:text="|${items != null ? #lists.size(items) : 0}개|">0개</span></div>
+                    <div class="empty-state" th:if="${items == null or #lists.isEmpty(items)}">
+                        <div class="empty-state__icon" aria-hidden="true">◇</div><h3>첫 QR 단서를 만들어보세요</h3><p>플레이어가 QR을 스캔하면 사진과 설명이 단서장에 기록됩니다.</p>
+                    </div>
+                    <div class="stack" th:unless="${items == null or #lists.isEmpty(items)}">
+                        <details class="card item-editor" th:each="item : ${items}">
+                            <summary class="item-editor__summary">
+                                <span class="item-thumb item-thumb--small"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" alt=""><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></span>
+                                <span><strong th:text="${item.name}">아이템 이름</strong><small th:text="${item.itemType != null ? item.itemType.displayName : '커스텀'}">아이템 유형</small></span>
+                                <span class="cluster"><span class="badge badge--accent" th:if="${item.qrEnabled}">QR</span><span aria-hidden="true">⌄</span></span>
+                            </summary>
+                            <form class="item-editor__form form-grid" th:action="@{/maker/games/{gameId}/items/{itemId}(gameId=${game.id},itemId=${item.id})}" method="post" enctype="multipart/form-data">
+                                <div class="item-media-editor">
+                                    <div class="item-thumb item-thumb--preview"><img th:id="|item-photo-preview-${item.id}|" th:src="${item.imageUrl}" th:hidden="${item.imageUrl == null or #strings.isEmpty(item.imageUrl)}" th:alt="|${item.name} 이미지 미리보기|"><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></div>
+                                    <div class="field"><label class="field__label" th:for="|item-photo-${item.id}|">사진 촬영 또는 교체</label><input class="file-input" th:id="|item-photo-${item.id}|" type="file" name="photo" accept="image/*" capture="environment" th:attr="data-photo-input=|item-photo-preview-${item.id}|"><span class="field__hint">카메라 촬영과 기존 사진 선택을 모두 지원합니다.</span></div>
+                                </div>
+                                <div class="form-grid form-grid--2">
+                                    <div class="field"><label class="field__label" th:for="|item-name-${item.id}|">이름</label><input class="input" th:id="|item-name-${item.id}|" name="name" th:value="${item.name}" maxlength="80" required></div>
+                                    <div class="field"><label class="field__label" th:for="|item-type-${item.id}|">유형</label><select class="select" th:id="|item-type-${item.id}|" name="itemType"><option value="KEY" th:selected="${item.itemType != null and item.itemType.name() == 'KEY'}">열쇠</option><option value="DOCUMENT" th:selected="${item.itemType != null and item.itemType.name() == 'DOCUMENT'}">문서</option><option value="PHOTO" th:selected="${item.itemType != null and item.itemType.name() == 'PHOTO'}">사진</option><option value="MAP" th:selected="${item.itemType != null and item.itemType.name() == 'MAP'}">지도</option><option value="TOOL" th:selected="${item.itemType != null and item.itemType.name() == 'TOOL'}">도구</option><option value="SYMBOL" th:selected="${item.itemType != null and item.itemType.name() == 'SYMBOL'}">기호</option><option value="EVIDENCE" th:selected="${item.itemType != null and item.itemType.name() == 'EVIDENCE'}">증거</option><option value="DEVICE" th:selected="${item.itemType != null and item.itemType.name() == 'DEVICE'}">장치</option><option value="FOOD" th:selected="${item.itemType != null and item.itemType.name() == 'FOOD'}">음식</option><option value="CUSTOM" th:selected="${item.itemType == null or item.itemType.name() == 'CUSTOM'}">커스텀</option></select></div>
+                                </div>
+                                <div class="field"><label class="field__label" th:for="|item-icon-${item.id}|">아이콘</label><input class="input" th:id="|item-icon-${item.id}|" name="icon" th:value="${item.emoji}" maxlength="16" placeholder="🔑"><div th:replace="~{fragments/controls :: emojiPicker(targetId=${'item-icon-' + item.id})}"></div><span class="field__hint">32개 프리셋 또는 원하는 이모지를 직접 입력하세요.</span></div>
+                                <div class="field"><label class="field__label" th:for="|item-description-${item.id}|">가방 설명</label><textarea class="textarea" th:id="|item-description-${item.id}|" name="description" th:text="${item.description}" maxlength="500" placeholder="아이템을 획득했을 때 보이는 설명"></textarea></div>
+                                <div class="field"><label class="field__label" th:for="|item-clue-${item.id}|">단서장 내용</label><textarea class="textarea" th:id="|item-clue-${item.id}|" name="clueText" th:text="${item.clueText}" maxlength="2000" placeholder="QR로 발견한 뒤 단서장에서 다시 읽을 상세 단서"></textarea></div>
+                                <label class="tool-toggle"><span><strong>QR 단서 사용</strong><small>이 아이템을 발견하는 전용 QR 코드를 발급합니다.</small></span><input type="checkbox" name="qrEnabled" value="true" th:checked="${item.qrEnabled}"><span class="toggle-ui" aria-hidden="true"></span></label>
+                                <div class="qr-item-panel" th:if="${item.qrEnabled}">
+                                    <img th:src="@{/maker/games/{gameId}/items/{itemId}/qr(gameId=${game.id},itemId=${item.id})}" th:alt="|${item.name} 단서 QR 코드|">
+                                    <a class="btn btn--secondary btn--small" th:href="@{/maker/games/{gameId}/items/{itemId}/qr(gameId=${game.id},itemId=${item.id},download=true)}" download>QR 다운로드</a>
+                                </div>
+                                <div class="stage-actions"><button class="btn btn--small" type="submit">아이템 저장</button><button class="btn btn--quiet btn--small" type="submit" th:formaction="@{/maker/games/{gameId}/items/{itemId}/delete(gameId=${game.id},itemId=${item.id})}" data-confirm="이 아이템을 삭제할까요? 사용 중인 스테이지가 없는지 확인하세요.">삭제</button></div>
+                            </form>
+                        </details>
+                    </div>
+                    <form class="card__body form-grid" th:action="@{/maker/games/{id}/items(id=${game.id})}" method="post" enctype="multipart/form-data" style="margin-top:1rem;background:var(--surface-2);border-radius:var(--radius-md)">
+                        <h3 style="margin:0">새 QR 단서·아이템</h3>
+                        <div class="form-grid form-grid--2">
+                            <div class="field"><label class="field__label" for="new-item-name">이름</label><input class="input" id="new-item-name" name="name" required placeholder="예: 녹슨 열쇠"></div>
+                            <div class="field"><label class="field__label" for="new-item-type">유형</label><select class="select" id="new-item-type" name="itemType"><option value="KEY">열쇠</option><option value="DOCUMENT">문서</option><option value="PHOTO">사진</option><option value="MAP">지도</option><option value="TOOL">도구</option><option value="SYMBOL">기호</option><option value="EVIDENCE">증거</option><option value="DEVICE">장치</option><option value="FOOD">음식</option><option value="CUSTOM">커스텀</option></select></div>
+                        </div>
+                        <div class="field"><label class="field__label" for="new-item-icon">아이콘</label><input class="input" id="new-item-icon" name="icon" maxlength="16" placeholder="🔑"><div th:replace="~{fragments/controls :: emojiPicker('new-item-icon')}"></div></div>
+                        <div class="field"><label class="field__label" for="new-item-description">가방 설명</label><textarea class="textarea" id="new-item-description" name="description" placeholder="플레이어 가방에 표시할 설명"></textarea></div>
+                        <div class="field"><label class="field__label" for="new-item-clue">단서장 내용</label><textarea class="textarea" id="new-item-clue" name="clueText" placeholder="스캔 후 다시 볼 상세 단서"></textarea></div>
+                        <div class="item-media-editor"><div class="item-thumb item-thumb--preview"><img id="new-item-photo-preview" hidden alt="새 아이템 이미지 미리보기"><span aria-hidden="true">📷</span></div><div class="field"><label class="field__label" for="new-item-photo">사진 촬영 또는 선택</label><input class="file-input" id="new-item-photo" type="file" name="photo" accept="image/*" capture="environment" data-photo-input="new-item-photo-preview"></div></div>
+                        <label class="tool-toggle"><span><strong>QR 단서 사용</strong><small>기본으로 전용 QR을 발급합니다. 일반 보상 아이템이면 끌 수 있습니다.</small></span><input type="checkbox" name="qrEnabled" value="true" checked><span class="toggle-ui" aria-hidden="true"></span></label>
+                        <button class="btn" type="submit">QR 단서·아이템 추가</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="builder-panel" id="panel-publish" role="tabpanel" aria-labelledby="tab-publish" hidden>
+                <div class="stack">
+                    <article class="card publish-card">
+                        <div class="builder-section__head"><div><h2>발행 체크</h2><p>발행본은 플레이 도중 바뀌지 않는 안전한 스냅샷입니다.</p></div><span class="badge" th:text="|버전 ${game.publishedVersion != null ? game.publishedVersion : 0}|">버전 0</span></div>
+                        <ul class="stack" style="padding-left:1.25rem">
+                            <li th:text="|스테이지 ${stages != null ? #lists.size(stages) : 0}개 구성|">스테이지 구성</li>
+                            <li>모든 퍼즐 정답과 이동 조건 검증</li>
+                            <li>모바일 미리보기와 힌트 확인</li>
+                        </ul>
+                        <form th:action="@{/maker/games/{id}/publish(id=${game.id})}" method="post">
+                            <button class="btn btn--block" type="submit" data-confirm="현재 초안으로 새 버전을 발행할까요? 진행 중인 플레이는 기존 버전을 유지합니다.">새 버전 발행하기</button>
+                        </form>
+                    </article>
+                    <article class="card publish-card" th:if="${game.status != null and game.status.name() == 'PUBLISHED'}">
+                        <div class="builder-section__head"><div><h2>플레이 링크와 QR</h2><p>로그인 없이 바로 플레이할 수 있는 링크입니다.</p></div></div>
+                        <div class="publish-url">
+                            <code id="play-url" th:text="${playUrl != null ? playUrl : '/play/' + game.slug}">/play/game-slug</code>
+                            <button class="btn btn--secondary btn--small" type="button" data-copy="play-url">링크 복사</button>
+                        </div>
+                        <div style="width:min(220px,100%);margin:1rem auto;text-align:center">
+                            <img th:src="@{/maker/games/{id}/qr(id=${game.id})}" th:alt="|${game.title} 플레이 QR 코드|">
+                            <a class="btn btn--secondary btn--small btn--block" th:href="@{/maker/games/{id}/qr(id=${game.id},download=true)}" download style="margin-top:.75rem">QR 다운로드</a>
+                        </div>
+                        <form th:action="@{/maker/games/{id}/hide(id=${game.id})}" method="post">
+                            <button class="btn btn--quiet btn--block" type="submit" data-confirm="게임을 숨길까요? 기존 플레이 세션은 계속 진행할 수 있습니다.">새 플레이 숨기기</button>
+                        </form>
+                    </article>
+                </div>
+            </section>
+        </div>
+
+        <aside class="builder-aside" aria-label="게임 현황">
+            <div class="card card__body">
+                <h2 style="margin:0;font-size:1rem">게임 현황</h2>
+                <div class="stack" style="margin-top:1rem;font-size:.85rem">
+                    <div class="spread"><span class="muted">스테이지</span><strong th:text="${stages != null ? #lists.size(stages) : 0}">0</strong></div>
+                    <div class="spread"><span class="muted">플레이</span><strong th:text="${stats != null ? stats.totalPlays : 0}">0</strong></div>
+                    <div class="spread"><span class="muted">완주율</span><strong th:text="${stats != null ? stats.completionRate + '%' : '0%'}">0%</strong></div>
+                    <div class="spread"><span class="muted">완주</span><strong th:text="${stats != null ? stats.completedPlays : 0}">0</strong></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

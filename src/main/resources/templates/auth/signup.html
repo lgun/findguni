@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>메이커 가입 · Findguni</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"><script defer th:src="@{/js/app.js}" src="/js/app.js"></script></head>
+<body>
+<div th:replace="~{fragments/nav :: publicNav('signup')}"></div>
+<main class="auth-shell" id="main-content"><div class="container--narrow"><section class="card auth-card" aria-labelledby="signup-title">
+    <header class="auth-card__header"><p class="eyebrow">Become a maker</p><h1 id="signup-title">내 방탈출 작업실 만들기</h1><p class="muted">계정은 제작과 관리에만 필요합니다. 플레이어는 가입하지 않아도 됩니다.</p></header>
+    <div class="alert alert--danger" th:if="${error}" role="alert" style="margin-bottom:1rem"><span aria-hidden="true">!</span><span th:text="${error}">입력 내용을 확인하세요.</span></div>
+    <form class="form-grid" th:action="@{/signup}" method="post">
+        <div class="field"><label class="field__label" for="displayName">메이커 이름</label><input class="input" id="displayName" name="displayName" th:value="${displayName}" maxlength="40" autocomplete="nickname" required><span class="field__hint">게임 소개에 공개되는 이름입니다.</span></div>
+        <div class="field"><label class="field__label" for="email">이메일</label><input class="input" id="email" type="email" name="email" th:value="${email}" maxlength="190" autocomplete="username" required></div>
+        <div class="field"><label class="field__label" for="password">비밀번호</label><div class="input-wrap"><input class="input" id="password" type="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" required><button class="input-action" type="button" data-password-toggle aria-controls="password" aria-pressed="false">보기</button></div><span class="field__hint">8자 이상으로 입력하세요.</span></div>
+        <div class="field"><label class="field__label" for="confirmPassword">비밀번호 확인</label><input class="input" id="confirmPassword" type="password" name="confirmPassword" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+        <label class="check"><input type="checkbox" name="termsAccepted" value="true" required><span><a href="#terms">이용약관</a>과 개인정보 처리 안내에 동의합니다.</span></label>
+        <button class="btn btn--block" type="submit">메이커로 시작하기</button>
+    </form>
+    <footer class="auth-card__footer">이미 계정이 있나요? <a th:href="@{/login}">로그인</a></footer>
+</section></div></main>
+</body></html>

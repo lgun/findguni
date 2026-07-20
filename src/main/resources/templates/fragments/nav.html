@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<body>
+<header class="site-header" th:fragment="publicNav(active)">
+    <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+    <div class="container site-header__inner">
+        <a class="brand" th:href="@{/}" aria-label="Findguni 홈">
+            <span class="brand__mark" aria-hidden="true">F</span>
+            <span>Findguni</span>
+        </a>
+        <button class="nav-toggle" type="button" data-nav-toggle aria-controls="public-nav-links" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+        <nav class="nav-links" id="public-nav-links" aria-label="주요 메뉴">
+            <a class="nav-link" th:href="@{/games}" th:attr="aria-current=${active == 'games' ? 'page' : null}">게임 둘러보기</a>
+            <a class="nav-link" sec:authorize="isAnonymous()" th:href="@{/login}" th:attr="aria-current=${active == 'login' ? 'page' : null}">로그인</a>
+            <a class="btn btn--small" sec:authorize="isAnonymous()" th:href="@{/signup}">게임 만들기</a>
+            <a class="btn btn--small" sec:authorize="hasRole('MAKER')" th:href="@{/maker}">메이커 콘솔</a>
+            <a class="btn btn--small" sec:authorize="hasRole('ADMIN')" th:href="@{/platform}">통합 관리자</a>
+        </nav>
+    </div>
+</header>
+
+<header class="site-header" th:fragment="makerNav(active)">
+    <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+    <div class="container site-header__inner">
+        <a class="brand" th:href="@{/maker}" aria-label="Findguni 메이커 홈">
+            <span class="brand__mark" aria-hidden="true">F</span>
+            <span>Maker</span>
+        </a>
+        <button class="nav-toggle" type="button" data-nav-toggle aria-controls="maker-nav-links" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+        <nav class="nav-links" id="maker-nav-links" aria-label="메이커 메뉴">
+            <a class="nav-link" th:href="@{/maker}" th:attr="aria-current=${active == 'dashboard' ? 'page' : null}">내 게임</a>
+            <a class="nav-link" th:href="@{/games}">공개 게임</a>
+            <a class="btn btn--small" th:href="@{/maker/games/new}">새 게임</a>
+            <form th:action="@{/logout}" method="post">
+                <button class="btn btn--quiet btn--small" type="submit">로그아웃</button>
+            </form>
+        </nav>
+    </div>
+</header>
+
+<header class="site-header" th:fragment="platformNav">
+    <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+    <div class="container site-header__inner">
+        <a class="brand" th:href="@{/platform}" aria-label="Findguni 통합 관리자">
+            <span class="brand__mark" aria-hidden="true">F</span>
+            <span>Platform</span>
+        </a>
+        <nav class="cluster" aria-label="관리자 메뉴">
+            <a class="nav-link" th:href="@{/games}">공개 게임</a>
+            <form th:action="@{/logout}" method="post">
+                <button class="btn btn--quiet btn--small" type="submit">로그아웃</button>
+            </form>
+        </nav>
+    </div>
+</header>
+</body>
+</html>

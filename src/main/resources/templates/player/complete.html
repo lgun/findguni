@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" th:content="${game.accentColor != null ? game.accentColor : '#635bff'}"><title th:text="|탈출 성공 · ${game.title}|">탈출 성공 · Findguni</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"><script defer th:src="@{/js/app.js}" src="/js/app.js"></script><script defer th:src="@{/js/audio.js}" src="/js/audio.js"></script></head>
+<body class="player-body" th:attr="data-theme=${game.theme != null ? game.theme.name() : 'MIDNIGHT'}" th:style="|--accent:${game.accentColor};--accent-secondary:${game.secondaryColor};--game-bg:${game.backgroundColor};|">
+<a class="skip-link" href="#main-content">완료 결과로 건너뛰기</a>
+<main class="player-main" id="main-content">
+    <section class="complete-hero">
+        <div class="complete-mark" aria-hidden="true" th:text="${game.gameIcon != null ? game.gameIcon : '✓'}">✓</div><p class="eyebrow">Escape complete</p><h1>탈출 성공!</h1><p class="lede" style="margin-inline:auto" th:text="|‘${game.title}’의 모든 비밀을 풀었습니다.|">모든 비밀을 풀었습니다.</p>
+    </section>
+    <section class="card card__body" aria-labelledby="result-title">
+        <h2 class="sr-only" id="result-title">플레이 결과</h2>
+        <div class="result-grid">
+            <div class="result-stat"><strong th:text="${playSummary != null ? playSummary.elapsedMinutes + '분' : '-'}">24분</strong><span>걸린 시간</span></div>
+            <div class="result-stat"><strong th:text="${playSummary != null ? playSummary.attemptCount : 0}">0</strong><span>정답 시도</span></div>
+            <div class="result-stat"><strong th:text="${playSummary != null ? playSummary.hintsUsed : 0}">0</strong><span>사용 힌트</span></div>
+        </div>
+        <p style="text-align:center" th:if="${completionMessage}" th:text="${completionMessage}">멋진 플레이였습니다.</p>
+        <div class="button-row" style="justify-content:center">
+            <form th:action="@{/play/{slug}/restart(slug=${game.slug})}" method="post"><button class="btn" type="submit">다시 플레이</button></form>
+            <a class="btn btn--secondary" th:href="@{/games}">다른 게임 찾기</a>
+        </div>
+    </section>
+    <div th:replace="~{fragments/audio :: playerAudioCompact(${game}, '완료 화면 배경 음악')}"></div>
+    <p class="muted" style="text-align:center;font-size:.78rem">진행 기록은 익명 플레이 통계로만 보관됩니다.</p>
+</main>
+</body></html>

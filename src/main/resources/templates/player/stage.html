@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" th:content="${game.accentColor != null ? game.accentColor : '#635bff'}">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <title th:text="|${stage.title} · ${game.title}|">스테이지 · Findguni</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+    <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+    <script defer th:src="@{/js/player.js}" src="/js/player.js"></script>
+    <script defer th:src="@{/js/scanner.js}" src="/js/scanner.js"></script>
+    <script defer th:src="@{/js/story.js}" src="/js/story.js"></script>
+    <script defer th:src="@{/js/audio.js}" src="/js/audio.js"></script>
+</head>
+<body class="player-body" th:attr="data-theme=${game.theme != null ? game.theme.name() : 'MIDNIGHT'}" th:style="|--accent:${game.accentColor};--accent-secondary:${game.secondaryColor};--game-bg:${game.backgroundColor};|">
+<a class="skip-link" href="#main-content">현재 스테이지로 건너뛰기</a>
+<header class="player-header">
+    <div class="container player-header__inner">
+        <a class="icon-btn" th:href="@{/play/{slug}(slug=${game.slug})}" aria-label="게임 정보로 돌아가기">←</a>
+        <div class="player-header__title" th:text="${game.title}">게임 제목</div>
+        <span class="player-game-icon" th:text="${game.gameIcon != null ? game.gameIcon : '🔐'}" aria-hidden="true">🔐</span>
+    </div>
+    <div class="progress" role="progressbar" aria-label="게임 진행률" aria-valuemin="0" aria-valuemax="100" th:attr="aria-valuenow=${progressPercent != null ? progressPercent : 0}">
+        <div class="progress__bar" th:style="|width:${progressPercent != null ? progressPercent : 0}%|"></div>
+    </div>
+</header>
+
+<main class="player-main" id="main-content">
+    <div class="alert alert--success" th:if="${success}" role="status" style="margin-bottom:1rem"><span aria-hidden="true">✓</span><span th:text="${success}">아이템을 획득했습니다.</span></div>
+    <div class="alert alert--danger" th:if="${error}" role="alert" style="margin-bottom:1rem"><span aria-hidden="true">!</span><span th:text="${error}">정답이 아닙니다. 다시 살펴보세요.</span></div>
+
+    <article class="card stage-story cinematic-scene" data-story-scene
+             th:attr="data-story-effect=${stage.storyEffect != null ? stage.storyEffect.name() : 'NONE'},data-story-speed=${game.storyTextSpeed},data-vignette=${game.enableVignette}">
+        <div class="cinematic-scene__media" th:if="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}">
+            <img th:src="${stage.sceneImageUrl}" th:alt="|${stage.title} 장면|">
+            <span class="cinematic-scene__shade" aria-hidden="true"></span>
+        </div>
+        <div class="cinematic-scene__content">
+            <p class="stage-kicker" th:text="|Stage ${stageNumber != null ? stageNumber : 1} / ${stageCount != null ? stageCount : '?'}|">Stage 1</p>
+            <h1 th:text="${stage.title}">스테이지 제목</h1>
+            <p class="stage-story__text" data-story-text th:attr="aria-label=${stage.story}" th:text="${stage.story}">이야기 내용</p>
+            <div class="instruction" th:if="${stage.instruction != null and !#strings.isEmpty(stage.instruction)}" th:text="${stage.instruction}">문제 안내</div>
+        </div>
+    </article>
+
+    <section class="card puzzle-shell" data-puzzle tabindex="-1" th:attr="data-lock-length=${stage.lockLength != null ? stage.lockLength : 4}" aria-labelledby="puzzle-title">
+        <h2 class="puzzle-title" id="puzzle-title" th:text="${stage.puzzleType != null ? stage.puzzleType.displayName : '이야기'}">퍼즐</h2>
+
+        <form th:action="@{/play/{slug}/solve(slug=${game.slug})}" method="post" class="stack">
+            <input type="hidden" name="answer" value="">
+
+            <div th:if="${stage.puzzleType.name() == 'STORY'}">
+                <p class="muted" style="text-align:center">이야기를 모두 읽었다면 다음 장면으로 이동하세요.</p>
+                <input type="hidden" data-answer-source value="continue" aria-hidden="true">
+            </div>
+
+            <div th:if="${stage.puzzleType.name() == 'NUMBER_LOCK'}">
+                <div class="lock-face" aria-label="숫자 휠 자물쇠">
+                    <div class="wheel" data-wheel="number" data-value="0" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="0" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
+                        <button class="wheel__control" type="button" data-wheel-move="1" aria-label="숫자 올리기">▲</button>
+                        <span class="wheel__value" data-wheel-value aria-hidden="true">0</span>
+                        <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="숫자 내리기">▼</button>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${stage.puzzleType.name() == 'ALPHABET_LOCK'}">
+                <div class="lock-face" aria-label="알파벳 휠 자물쇠">
+                    <div class="wheel" data-wheel="alphabet" data-value="A" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="25" aria-valuenow="0" aria-valuetext="A" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
+                        <button class="wheel__control" type="button" data-wheel-move="1" aria-label="글자 올리기">▲</button>
+                        <span class="wheel__value" data-wheel-value aria-hidden="true">A</span>
+                        <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="글자 내리기">▼</button>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${stage.puzzleType.name() == 'KEYPAD'}">
+                <div class="keypad-display" data-keypad-display aria-live="polite">····</div>
+                <div class="keypad" aria-label="숫자 키패드">
+                    <button class="keypad__key" type="button" data-keypad-key="1">1</button><button class="keypad__key" type="button" data-keypad-key="2">2</button><button class="keypad__key" type="button" data-keypad-key="3">3</button>
+                    <button class="keypad__key" type="button" data-keypad-key="4">4</button><button class="keypad__key" type="button" data-keypad-key="5">5</button><button class="keypad__key" type="button" data-keypad-key="6">6</button>
+                    <button class="keypad__key" type="button" data-keypad-key="7">7</button><button class="keypad__key" type="button" data-keypad-key="8">8</button><button class="keypad__key" type="button" data-keypad-key="9">9</button>
+                    <button class="keypad__key" type="button" data-keypad-key="clear" aria-label="전체 지우기">C</button><button class="keypad__key" type="button" data-keypad-key="0">0</button><button class="keypad__key" type="button" data-keypad-key="delete" aria-label="한 자리 지우기">⌫</button>
+                </div>
+            </div>
+
+            <div th:if="${stage.puzzleType.name() == 'DIRECTION_LOCK'}">
+                <div class="direction-pad" data-direction-pad tabindex="0" aria-label="방향 자물쇠. 버튼을 누르거나 화면을 스와이프하세요.">
+                    <button class="direction-key" type="button" data-direction="UP" aria-label="위">↑</button>
+                    <button class="direction-key" type="button" data-direction="RIGHT" aria-label="오른쪽">→</button>
+                    <button class="direction-key" type="button" data-direction="DOWN" aria-label="아래">↓</button>
+                    <button class="direction-key" type="button" data-direction="LEFT" aria-label="왼쪽">←</button>
+                    <span class="direction-pad__center" aria-hidden="true">밀어서<br>입력</span>
+                </div>
+                <div class="sequence-display" data-sequence aria-live="polite"></div>
+                <button class="btn btn--quiet btn--small btn--block" type="button" data-sequence-clear>입력 지우기</button>
+            </div>
+
+            <div th:if="${stage.puzzleType.name() == 'COLOR_LOCK'}">
+                <div class="color-pad" aria-label="색상 자물쇠">
+                    <button class="color-key" type="button" data-color="RED">빨강</button><button class="color-key" type="button" data-color="BLUE">파랑</button><button class="color-key" type="button" data-color="GREEN">초록</button>
+                    <button class="color-key" type="button" data-color="YELLOW">노랑</button><button class="color-key" type="button" data-color="PURPLE">보라</button><button class="color-key" type="button" data-color="ORANGE">주황</button>
+                </div>
+                <div class="sequence-display" data-sequence aria-live="polite"></div>
+                <button class="btn btn--quiet btn--small btn--block" type="button" data-sequence-clear>입력 지우기</button>
+            </div>
+
+            <div class="choice-list" th:if="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}">
+                <button class="choice-key" type="submit" data-choice th:each="option : ${stage.options}" th:attr="data-choice=${option}" th:text="${option}">선택지</button>
+            </div>
+
+            <div class="answer-row" th:if="${stage.puzzleType.name() == 'TEXT_ANSWER'}">
+                <label class="sr-only" for="text-answer">정답</label>
+                <input class="input" id="text-answer" data-answer-source autocomplete="off" placeholder="정답을 입력하세요" required>
+            </div>
+
+            <p class="puzzle-status" data-puzzle-status aria-live="polite"></p>
+            <button class="btn btn--block" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}" th:text="${stage.puzzleType.name() == 'STORY' ? '다음 장면으로' : '자물쇠 열기'}">자물쇠 열기</button>
+        </form>
+    </section>
+
+    <section class="hint-card" th:if="${hintRevealed}" aria-labelledby="hint-title">
+        <h2 id="hint-title">힌트</h2><p th:text="${revealedHint != null ? revealedHint : stage.hint}">힌트 내용</p>
+    </section>
+
+    <section class="card hint-prompt" th:unless="${hintRevealed}" aria-label="힌트">
+        <div><strong>막혔나요?</strong><span class="muted" th:text="|시도 ${attemptCount != null ? attemptCount : 0}회|">시도 0회</span></div>
+        <form th:action="@{/play/{slug}/hint(slug=${game.slug})}" method="post"><button class="btn btn--secondary btn--small" type="submit">힌트 보기</button></form>
+    </section>
+</main>
+
+<nav class="tool-dock" aria-label="플레이 도구">
+    <button class="tool-dock__button" type="button" data-tool-open="inventory" aria-controls="tool-drawer"><span aria-hidden="true">🎒</span><span>가방</span></button>
+    <button class="tool-dock__button" type="button" data-tool-open="clues" aria-controls="tool-drawer" th:if="${game.allowCluebook}"><span aria-hidden="true">🧩</span><span>단서장</span></button>
+    <button class="tool-dock__button" type="button" data-tool-open="notes" aria-controls="tool-drawer" th:if="${game.allowNotebook}"><span aria-hidden="true">📝</span><span>메모</span></button>
+    <button class="tool-dock__button" type="button" data-tool-open="sound" aria-controls="tool-drawer"><span aria-hidden="true">♫</span><span>사운드</span></button>
+    <button class="tool-dock__button tool-dock__button--accent" type="button" data-tool-open="scanner" data-scanner-open aria-controls="tool-drawer" th:if="${game.allowQrScanner}"><span aria-hidden="true">▣</span><span>QR 스캔</span></button>
+</nav>
+
+<div class="tool-overlay" data-tool-overlay hidden></div>
+<aside class="tool-drawer" id="tool-drawer" data-tool-drawer role="dialog" aria-modal="true" aria-labelledby="tool-drawer-title" hidden>
+    <div class="tool-drawer__handle" aria-hidden="true"></div>
+    <header class="tool-drawer__header">
+        <div><p class="eyebrow">Play tools</p><h2 id="tool-drawer-title">플레이 도구</h2></div>
+        <button class="icon-btn" type="button" data-tool-close aria-label="플레이 도구 닫기">×</button>
+    </header>
+    <div class="tool-tabs" role="tablist" aria-label="도구 선택">
+        <button type="button" role="tab" data-tool-tab="inventory" id="tool-tab-inventory" aria-controls="tool-panel-inventory" aria-selected="true">가방</button>
+        <button type="button" role="tab" data-tool-tab="clues" id="tool-tab-clues" aria-controls="tool-panel-clues" aria-selected="false" th:if="${game.allowCluebook}">단서장</button>
+        <button type="button" role="tab" data-tool-tab="notes" id="tool-tab-notes" aria-controls="tool-panel-notes" aria-selected="false" th:if="${game.allowNotebook}">메모장</button>
+        <button type="button" role="tab" data-tool-tab="sound" id="tool-tab-sound" aria-controls="tool-panel-sound" aria-selected="false">사운드</button>
+        <button type="button" role="tab" data-tool-tab="scanner" id="tool-tab-scanner" aria-controls="tool-panel-scanner" aria-selected="false" th:if="${game.allowQrScanner}">QR 스캔</button>
+    </div>
+
+    <div class="tool-drawer__content">
+        <section class="tool-panel" id="tool-panel-inventory" role="tabpanel" aria-labelledby="tool-tab-inventory" data-tool-panel="inventory">
+            <div class="empty-state" th:if="${inventory == null or #lists.isEmpty(inventory)}"><div class="empty-state__icon" aria-hidden="true">🎒</div><h3>가방이 비어 있어요</h3><p>스테이지를 해결하면 발견한 아이템이 여기에 모입니다.</p></div>
+            <ul class="tool-card-list" th:unless="${inventory == null or #lists.isEmpty(inventory)}">
+                <li class="tool-item-card" th:each="item : ${inventory}">
+                    <div class="tool-item-card__media"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="|${item.name} 이미지|"><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}" aria-hidden="true">◇</span></div>
+                    <div><strong th:text="${item.name}">아이템</strong><p th:text="${item.clueText != null and !#strings.isEmpty(item.clueText) ? item.clueText : item.description}">아이템 설명 또는 단서</p></div>
+                </li>
+            </ul>
+        </section>
+
+        <section class="tool-panel" id="tool-panel-clues" role="tabpanel" aria-labelledby="tool-tab-clues" data-tool-panel="clues" hidden th:if="${game.allowCluebook}">
+            <div class="empty-state" th:if="${scannedClues == null or #lists.isEmpty(scannedClues)}"><div class="empty-state__icon" aria-hidden="true">🧩</div><h3>아직 스캔한 단서가 없어요</h3><p>현장의 QR을 스캔하면 단서와 사진을 이곳에서 다시 볼 수 있습니다.</p></div>
+            <ul class="tool-card-list" th:unless="${scannedClues == null or #lists.isEmpty(scannedClues)}">
+                <li class="tool-item-card tool-item-card--clue" th:each="clue : ${scannedClues}">
+                    <div class="tool-item-card__media"><img th:if="${clue.imageUrl != null and !#strings.isEmpty(clue.imageUrl)}" th:src="${clue.imageUrl}" th:alt="|${clue.name} 단서 이미지|"><span th:unless="${clue.imageUrl != null and !#strings.isEmpty(clue.imageUrl)}" th:text="${clue.emoji != null ? clue.emoji : '🧩'}" aria-hidden="true">🧩</span></div>
+                    <div><strong th:text="${clue.name}">단서</strong><p th:text="${clue.clueText != null and !#strings.isEmpty(clue.clueText) ? clue.clueText : clue.description}">단서 내용</p></div>
+                </li>
+            </ul>
+        </section>
+
+        <section class="tool-panel" id="tool-panel-notes" role="tabpanel" aria-labelledby="tool-tab-notes" data-tool-panel="notes" hidden th:if="${game.allowNotebook}">
+            <form class="form-grid" th:action="@{/play/{slug}/notes(slug=${game.slug})}" method="post">
+                <div class="field"><label class="field__label" for="player-notes">내 메모</label><textarea class="textarea notebook" id="player-notes" name="notes" maxlength="4000" th:text="${notes}" placeholder="암호 후보, 단서의 순서, 함께 떠오른 생각을 자유롭게 적어두세요."></textarea><span class="field__hint">이 익명 플레이 세션에만 저장됩니다.</span></div>
+                <button class="btn btn--block" type="submit">메모 저장</button>
+            </form>
+        </section>
+
+        <section class="tool-panel sound-panel" id="tool-panel-sound" role="tabpanel" aria-labelledby="tool-tab-sound" data-tool-panel="sound" hidden
+                 data-audio-controller
+                 th:attr="data-game-slug=${game.slug},data-stage-key=${stage.stableKey},data-bgm-url=${game.bgmUrl},data-bgm-volume=${game.bgmVolume},data-bgm-loop=${game.bgmLoop},data-sfx-url=${stage.sfxUrl},data-sfx-volume=${stage.sfxVolume}">
+            <div class="sound-panel__intro"><span aria-hidden="true">♫</span><div><strong>장면 사운드</strong><p>오디오는 제작자가 지정한 크기로 재생됩니다. 이 기기에서는 종류별로 켜고 끌 수 있어요.</p></div></div>
+            <div class="sound-track-list" th:if="${(game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)) or (stage.sfxUrl != null and !#strings.isEmpty(stage.sfxUrl))}">
+                <article class="sound-track" th:if="${game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)}">
+                    <div class="sound-track__main"><span aria-hidden="true">♬</span><div><strong th:text="${game.bgmTitle != null and !#strings.isEmpty(game.bgmTitle) ? game.bgmTitle : '배경 음악'}">배경 음악</strong><small th:text="${game.bgmCreator != null and !#strings.isEmpty(game.bgmCreator) ? game.bgmCreator : '직접 업로드'}">직접 업로드</small></div></div>
+                    <div class="sound-track__state"><span>제작자 볼륨 <output th:text="${#numbers.formatDecimal(game.bgmVolume * 100, 1, 0)}">55</output>%</span><button class="btn btn--secondary btn--small" type="button" data-audio-toggle="bgm" aria-pressed="true">BGM 켜짐</button></div>
+                    <meter min="0" max="1" th:value="${game.bgmVolume}" aria-label="제작자가 지정한 BGM 볼륨"></meter>
+                    <div class="audio-attribution" th:if="${(game.bgmLicense != null and !#strings.isEmpty(game.bgmLicense)) or (game.bgmSourceUrl != null and !#strings.isEmpty(game.bgmSourceUrl))}">
+                        <span th:text="${game.bgmLicense}">라이선스</span>
+                        <a th:if="${game.bgmLicenseUrl != null and !#strings.isEmpty(game.bgmLicenseUrl)}" th:href="${game.bgmLicenseUrl}" target="_blank" rel="noopener noreferrer">라이선스 조건</a>
+                        <a th:if="${game.bgmSourceUrl != null and !#strings.isEmpty(game.bgmSourceUrl)}" th:href="${game.bgmSourceUrl}" target="_blank" rel="noopener noreferrer">원문</a>
+                    </div>
+                </article>
+                <article class="sound-track" th:if="${stage.sfxUrl != null and !#strings.isEmpty(stage.sfxUrl)}">
+                    <div class="sound-track__main"><span aria-hidden="true">✦</span><div><strong th:text="${stage.sfxTitle != null and !#strings.isEmpty(stage.sfxTitle) ? stage.sfxTitle : '장면 효과음'}">장면 효과음</strong><small th:text="${stage.sfxCreator != null and !#strings.isEmpty(stage.sfxCreator) ? stage.sfxCreator : '직접 업로드'}">직접 업로드</small></div></div>
+                    <div class="sound-track__state"><span>제작자 볼륨 <output th:text="${#numbers.formatDecimal(stage.sfxVolume * 100, 1, 0)}">80</output>%</span><button class="btn btn--secondary btn--small" type="button" data-audio-toggle="sfx" aria-pressed="true">효과음 켜짐</button></div>
+                    <meter min="0" max="1" th:value="${stage.sfxVolume}" aria-label="제작자가 지정한 효과음 볼륨"></meter>
+                    <div class="audio-attribution" th:if="${(stage.sfxLicense != null and !#strings.isEmpty(stage.sfxLicense)) or (stage.sfxSourceUrl != null and !#strings.isEmpty(stage.sfxSourceUrl))}">
+                        <span th:text="${stage.sfxLicense}">라이선스</span>
+                        <a th:if="${stage.sfxLicenseUrl != null and !#strings.isEmpty(stage.sfxLicenseUrl)}" th:href="${stage.sfxLicenseUrl}" target="_blank" rel="noopener noreferrer">라이선스 조건</a>
+                        <a th:if="${stage.sfxSourceUrl != null and !#strings.isEmpty(stage.sfxSourceUrl)}" th:href="${stage.sfxSourceUrl}" target="_blank" rel="noopener noreferrer">원문</a>
+                    </div>
+                </article>
+            </div>
+            <div class="empty-state" th:unless="${(game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)) or (stage.sfxUrl != null and !#strings.isEmpty(stage.sfxUrl))}"><div class="empty-state__icon" aria-hidden="true">♫</div><h3>이 장면에는 사운드가 없어요</h3><p>조용히 단서에 집중해 보세요.</p></div>
+            <audio data-bgm-track th:if="${game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)}" th:src="${game.bgmUrl}" preload="auto" th:loop="${game.bgmLoop}">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+            <audio data-sfx-track th:if="${stage.sfxUrl != null and !#strings.isEmpty(stage.sfxUrl)}" th:src="${stage.sfxUrl}" preload="auto">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+            <p class="audio-playback-status" data-audio-status role="status" aria-live="polite"></p>
+            <button class="btn btn--block" type="button" data-audio-start hidden>사운드 시작</button>
+        </section>
+
+        <section class="tool-panel scanner-panel" id="tool-panel-scanner" role="tabpanel" aria-labelledby="tool-tab-scanner" data-tool-panel="scanner" hidden th:if="${game.allowQrScanner}" th:attr="data-scan-endpoint=@{/play/{slug}/scan(slug=${game.slug})}" data-scanner>
+            <div class="scanner-view">
+                <video data-scanner-video playsinline muted hidden aria-label="QR 스캔용 카메라 화면"></video>
+                <canvas data-scanner-canvas hidden></canvas>
+                <div class="scanner-frame" aria-hidden="true"><span></span></div>
+                <div class="scanner-placeholder" data-scanner-placeholder><span aria-hidden="true">▣</span><strong>게임 속 QR을 화면 안에 맞춰 주세요</strong><p>QR의 주소로 이동하지 않고 이 게임의 단서인지 서버에서 안전하게 확인합니다.</p></div>
+            </div>
+            <p class="scanner-status" data-scanner-status role="status" aria-live="polite">카메라를 준비하고 있습니다.</p>
+            <div class="button-row">
+                <button class="btn" type="button" data-camera-start>카메라 시작</button>
+                <button class="btn btn--secondary" type="button" data-camera-stop hidden>카메라 끄기</button>
+            </div>
+            <div class="scanner-fallback">
+                <label class="btn btn--secondary btn--block" for="scanner-photo">사진으로 QR 읽기</label>
+                <input class="sr-only" id="scanner-photo" type="file" accept="image/*" capture="environment" data-scanner-file>
+                <p class="field__hint">카메라 권한을 줄 수 없거나 실시간 인식이 안 될 때 QR 사진을 촬영하거나 선택하세요.</p>
+            </div>
+        </section>
+    </div>
+</aside>
+</body>
+</html>

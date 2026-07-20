@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>통합 관리자 · Findguni</title><link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css"><script defer th:src="@{/js/app.js}" src="/js/app.js"></script></head>
+<body>
+<div th:replace="~{fragments/nav :: platformNav}"></div>
+<main class="page-main" id="main-content"><div class="container stack stack--lg">
+    <div class="alert alert--success" th:if="${success}" role="status"><span aria-hidden="true">✓</span><span th:text="${success}">처리했습니다.</span><button class="alert__close" type="button" data-dismiss aria-label="알림 닫기">×</button></div>
+    <div class="alert alert--danger" th:if="${error}" role="alert"><span aria-hidden="true">!</span><span th:text="${error}">요청을 처리하지 못했습니다.</span></div>
+    <header><p class="eyebrow">Platform control</p><h1 class="page-title">통합 관리자</h1><p class="lede">메이커와 공개 게임 상태, 플랫폼 이용 흐름을 한눈에 확인합니다.</p></header>
+    <section class="metric-grid" aria-label="플랫폼 지표">
+        <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.totalMakers : 0}">0</strong><span class="metric__label">메이커</span></div>
+        <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.totalGames : 0}">0</strong><span class="metric__label">전체 게임</span></div>
+        <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.publishedGames : 0}">0</strong><span class="metric__label">발행 게임</span></div>
+        <div class="metric"><strong class="metric__value" th:text="${stats != null ? stats.activePlays : 0}">0</strong><span class="metric__label">진행 중 플레이</span></div>
+    </section>
+
+    <section aria-labelledby="makers-title"><div class="spread" style="margin-bottom:.8rem"><h2 class="section-title" id="makers-title">메이커 관리</h2><span class="badge" th:text="|${makers != null ? #lists.size(makers) : 0}명|">0명</span></div>
+        <div class="empty-state" th:if="${makers == null or #lists.isEmpty(makers)}"><div class="empty-state__icon">–</div><h3>등록된 메이커가 없습니다</h3></div>
+        <div class="table-wrap" th:unless="${makers == null or #lists.isEmpty(makers)}"><table class="table"><thead><tr><th>메이커</th><th>이메일</th><th>상태</th><th>가입일</th><th>관리</th></tr></thead><tbody><tr th:each="maker : ${makers}"><td><strong th:text="${maker.displayName}">메이커</strong></td><td th:text="${maker.email}">email@example.com</td><td><span class="badge" th:classappend="${maker.active} ? 'badge--success' : 'badge--danger'" th:text="${maker.status.displayName}">활성</span></td><td th:text="${#temporals.format(maker.createdAt, 'yyyy.MM.dd')}">2026.01.01</td><td><form th:action="@{/platform/accounts/{id}/toggle(id=${maker.id})}" method="post"><button class="btn btn--secondary btn--small" type="submit" th:text="${maker.active ? '계정 정지' : '정지 해제'}" data-confirm="메이커 계정 상태를 변경할까요?">계정 정지</button></form></td></tr></tbody></table></div>
+    </section>
+
+    <section aria-labelledby="platform-games-title"><div class="spread" style="margin-bottom:.8rem"><h2 class="section-title" id="platform-games-title">게임 관리</h2><span class="badge" th:text="|${games != null ? #lists.size(games) : 0}개|">0개</span></div>
+        <div class="empty-state" th:if="${games == null or #lists.isEmpty(games)}"><div class="empty-state__icon">–</div><h3>등록된 게임이 없습니다</h3></div>
+        <div class="table-wrap" th:unless="${games == null or #lists.isEmpty(games)}"><table class="table"><thead><tr><th>게임</th><th>메이커</th><th>공개 범위</th><th>상태</th><th>관리</th></tr></thead><tbody><tr th:each="game : ${games}"><td><strong th:text="${game.title}">게임</strong><br><span class="muted" th:text="${game.slug}">slug</span></td><td th:text="${game.owner.displayName}">메이커</td><td th:text="${game.visibility.displayName}">링크 공개</td><td><span class="badge" th:classappend="${game.status.name() == 'PUBLISHED'} ? 'badge--success' : 'badge--warning'" th:text="${game.status.displayName}">발행</span></td><td><form th:action="@{/platform/games/{id}/toggle(id=${game.id})}" method="post"><button class="btn btn--secondary btn--small" type="submit" th:text="${game.status.name() == 'HIDDEN' ? '숨김 해제' : '숨기기'}" data-confirm="게임 공개 상태를 변경할까요?">숨기기</button></form></td></tr></tbody></table></div>
+    </section>
+
+    <section class="card card__body" aria-labelledby="activity-title"><h2 class="section-title" id="activity-title">최근 발행</h2><div class="empty-state" th:if="${recentActivity == null or #lists.isEmpty(recentActivity)}" style="margin-top:1rem"><p>아직 표시할 발행 기록이 없습니다.</p></div><ul class="activity-list" th:unless="${recentActivity == null or #lists.isEmpty(recentActivity)}"><li th:each="activity : ${recentActivity}"><span class="activity-dot" aria-hidden="true"></span><div><strong th:text="${activity.title}">게임 발행</strong><div class="muted" th:text="${activity.detail}">메이커 · 버전</div></div><time class="muted" th:text="${activity.timeDisplay}">방금</time></li></ul></section>
+</div></main>
+</body></html>

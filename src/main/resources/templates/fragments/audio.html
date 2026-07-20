@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="audio-picker"
+         th:fragment="openversePicker(instanceId, fieldPrefix, kind, heading, urlValue, titleValue, creatorValue, licenseValue, licenseUrlValue, sourceUrlValue)"
+         th:attr="data-audio-picker=${instanceId},data-audio-kind=${kind},data-audio-search-endpoint=@{/maker/audio/search}">
+    <div class="audio-picker__head">
+        <div>
+            <strong th:text="${heading}">오디오 찾기</strong>
+            <p>Openverse에서 재사용 가능한 오디오를 검색합니다.</p>
+        </div>
+        <span class="badge">Openverse</span>
+    </div>
+
+    <div class="audio-search-row" role="search">
+        <label class="sr-only" th:for="|${instanceId}-query|" th:text="|${heading} 검색어|">오디오 검색어</label>
+        <input class="input" th:id="|${instanceId}-query|" type="search" maxlength="100" autocomplete="off"
+               placeholder="예: suspense, door, forest" data-openverse-query>
+        <button class="btn btn--secondary" type="button" data-openverse-search>검색</button>
+    </div>
+    <p class="audio-search-status" data-openverse-status role="status" aria-live="polite">검색어를 입력해 오디오를 찾아보세요.</p>
+    <div class="audio-search-results" data-openverse-results aria-live="polite"></div>
+
+    <div class="selected-audio" data-audio-selected th:hidden="${urlValue == null or #strings.isEmpty(urlValue)}">
+        <div class="selected-audio__main">
+            <span aria-hidden="true">♪</span>
+            <div>
+                <strong data-selected-title th:text="${titleValue != null and !#strings.isEmpty(titleValue) ? titleValue : '선택한 오디오'}">선택한 오디오</strong>
+                <small data-selected-creator th:text="${creatorValue != null and !#strings.isEmpty(creatorValue) ? creatorValue : '창작자 정보 없음'}">창작자 정보 없음</small>
+            </div>
+        </div>
+        <audio controls preload="none" data-selected-preview th:src="${urlValue}">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+        <div class="audio-attribution audio-attribution--compact">
+            <a data-selected-license target="_blank" rel="noopener noreferrer"
+               th:hidden="${licenseUrlValue == null or #strings.isEmpty(licenseUrlValue)}"
+               th:href="${licenseUrlValue}" th:text="${licenseValue != null and !#strings.isEmpty(licenseValue) ? licenseValue : '라이선스'}">라이선스</a>
+            <a data-selected-source target="_blank" rel="noopener noreferrer"
+               th:hidden="${sourceUrlValue == null or #strings.isEmpty(sourceUrlValue)}"
+               th:href="${sourceUrlValue}">원문 확인</a>
+        </div>
+    </div>
+
+    <input type="hidden" th:name="${fieldPrefix + 'Url'}" th:value="${urlValue}" data-audio-field="url">
+    <input type="hidden" th:name="${fieldPrefix + 'Title'}" th:value="${titleValue}" data-audio-field="title">
+    <input type="hidden" th:name="${fieldPrefix + 'Creator'}" th:value="${creatorValue}" data-audio-field="creator">
+    <input type="hidden" th:name="${fieldPrefix + 'License'}" th:value="${licenseValue}" data-audio-field="license">
+    <input type="hidden" th:name="${fieldPrefix + 'LicenseUrl'}" th:value="${licenseUrlValue}" data-audio-field="licenseUrl">
+    <input type="hidden" th:name="${fieldPrefix + 'SourceUrl'}" th:value="${sourceUrlValue}" data-audio-field="sourceUrl">
+
+    <p class="license-warning"><span aria-hidden="true">!</span> Openverse 검색 결과가 이용 허가를 보증하지는 않습니다. 선택 전 원문에서 라이선스와 표시 조건을 직접 확인하세요.</p>
+</section>
+
+<aside class="player-audio-compact" th:fragment="playerAudioCompact(game, placementLabel)" data-audio-controller
+       th:if="${game.bgmUrl != null and !#strings.isEmpty(game.bgmUrl)}"
+       th:attr="aria-label=${placementLabel},data-game-slug=${game.slug},data-bgm-url=${game.bgmUrl},data-bgm-volume=${game.bgmVolume},data-bgm-loop=${game.bgmLoop}">
+    <div class="player-audio-compact__main">
+        <span class="player-audio-compact__icon" aria-hidden="true">♫</span>
+        <div><strong th:text="${game.bgmTitle != null and !#strings.isEmpty(game.bgmTitle) ? game.bgmTitle : '배경 음악'}">배경 음악</strong><small>제작자 볼륨 <output th:text="${#numbers.formatDecimal(game.bgmVolume * 100, 1, 0)}">55</output>%</small></div>
+        <button class="btn btn--secondary btn--small" type="button" data-audio-toggle="bgm" aria-pressed="true">BGM 켜짐</button>
+    </div>
+    <div class="audio-attribution audio-attribution--compact" th:if="${(game.bgmLicense != null and !#strings.isEmpty(game.bgmLicense)) or (game.bgmSourceUrl != null and !#strings.isEmpty(game.bgmSourceUrl))}">
+        <span th:text="${game.bgmCreator}">창작자</span><span th:text="${game.bgmLicense}">라이선스</span>
+        <a th:if="${game.bgmLicenseUrl != null and !#strings.isEmpty(game.bgmLicenseUrl)}" th:href="${game.bgmLicenseUrl}" target="_blank" rel="noopener noreferrer">조건</a>
+        <a th:if="${game.bgmSourceUrl != null and !#strings.isEmpty(game.bgmSourceUrl)}" th:href="${game.bgmSourceUrl}" target="_blank" rel="noopener noreferrer">원문</a>
+    </div>
+    <audio data-bgm-track th:src="${game.bgmUrl}" preload="auto" th:loop="${game.bgmLoop}">오디오 재생을 지원하지 않는 브라우저입니다.</audio>
+    <p class="audio-playback-status" data-audio-status role="status" aria-live="polite"></p>
+    <button class="btn btn--block" type="button" data-audio-start hidden>사운드 시작</button>
+</aside>
+</body>
+</html>
