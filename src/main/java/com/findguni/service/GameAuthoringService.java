@@ -78,6 +78,16 @@ public class GameAuthoringService {
     }
 
     @Transactional
+    public EscapeGame updateHintPolicy(Long gameId, UserAccount owner, boolean unlimitedHints,
+                                       int hintLimit, int hintCooldownSeconds) {
+        EscapeGame game = ownedGame(gameId, owner);
+        game.setUnlimitedHints(unlimitedHints);
+        game.setHintLimit(validatedRange(hintLimit, 1, 100, "힌트 횟수 제한"));
+        game.setHintCooldownSeconds(validatedRange(hintCooldownSeconds, 0, 3_600, "힌트 대기시간"));
+        return game;
+    }
+
+    @Transactional
     public EscapeGame updateSettings(Long gameId, UserAccount owner, String title, String slug,
                                      String summary, String intro, String coverImageUrl, String accentColor,
                                      GameTheme theme, Difficulty difficulty,
@@ -116,6 +126,25 @@ public class GameAuthoringService {
                                      String bgmLicenseUrl, String bgmSourceUrl, double bgmVolume, boolean bgmLoop,
                                      int storyTextSpeed, boolean enableVignette) {
         EscapeGame game = ownedGame(gameId, owner);
+        return updateSettings(gameId, owner, title, slug, summary, intro, coverImageUrl, accentColor,
+                secondaryColor, backgroundColor, gameIcon, allowNotebook, allowCluebook, allowQrScanner,
+                theme, difficulty, estimatedMinutes, visibility, bgmUrl, bgmTitle, bgmCreator, bgmLicense,
+                bgmLicenseUrl, bgmSourceUrl, bgmVolume, bgmLoop, storyTextSpeed, enableVignette,
+                game.isUnlimitedHints(), game.getHintLimit(), game.getHintCooldownSeconds());
+    }
+
+    @Transactional
+    public EscapeGame updateSettings(Long gameId, UserAccount owner, String title, String slug,
+                                     String summary, String intro, String coverImageUrl, String accentColor,
+                                     String secondaryColor, String backgroundColor, String gameIcon,
+                                     boolean allowNotebook, boolean allowCluebook, boolean allowQrScanner,
+                                     GameTheme theme, Difficulty difficulty,
+                                     int estimatedMinutes, GameVisibility visibility,
+                                     String bgmUrl, String bgmTitle, String bgmCreator, String bgmLicense,
+                                     String bgmLicenseUrl, String bgmSourceUrl, double bgmVolume, boolean bgmLoop,
+                                     int storyTextSpeed, boolean enableVignette,
+                                     boolean unlimitedHints, int hintLimit, int hintCooldownSeconds) {
+        EscapeGame game = ownedGame(gameId, owner);
         game.setTitle(required(title, "게임 제목", 120));
         if (game.getPublishedVersion() == 0 || Objects.equals(game.getSlug(), slugify(slug))) {
             game.setSlug(uniqueSlug(slug, game.getTitle(), game.getId()));
@@ -130,6 +159,9 @@ public class GameAuthoringService {
         game.setAllowNotebook(allowNotebook);
         game.setAllowCluebook(allowCluebook);
         game.setAllowQrScanner(allowQrScanner);
+        game.setUnlimitedHints(unlimitedHints);
+        game.setHintLimit(validatedRange(hintLimit, 1, 100, "힌트 횟수 제한"));
+        game.setHintCooldownSeconds(validatedRange(hintCooldownSeconds, 0, 3_600, "힌트 대기시간"));
         game.setBgmUrl(validatedAudioUrl(bgmUrl, "배경 음악"));
         game.setBgmTitle(optionalOrNull(bgmTitle, 200));
         game.setBgmCreator(optionalOrNull(bgmCreator, 200));
@@ -290,6 +322,24 @@ public class GameAuthoringService {
     public GameItem addItem(Long gameId, UserAccount owner, ItemType itemType, String name,
                             String description, String clueText, String emoji,
                             boolean qrEnabled, String imageUrl) {
+        return addItem(gameId, owner, itemType, name, description, clueText, emoji,
+                qrEnabled, false, null, imageUrl);
+    }
+
+    @Transactional
+    public GameItem addItem(Long gameId, UserAccount owner, ItemType itemType, String name,
+                            String description, String clueText, String emoji,
+                            boolean qrEnabled, boolean initiallyOwned, String copyableText,
+                            String imageUrl) {
+        return addItem(gameId, owner, itemType, name, description, clueText, emoji,
+                qrEnabled, initiallyOwned, copyableText, imageUrl, null, null);
+    }
+
+    @Transactional
+    public GameItem addItem(Long gameId, UserAccount owner, ItemType itemType, String name,
+                            String description, String clueText, String emoji,
+                            boolean qrEnabled, boolean initiallyOwned, String copyableText,
+                            String imageUrl, String alternateRequiredItem, String alternateScanText) {
         EscapeGame game = ownedGame(gameId, owner);
         GameItem item = new GameItem(game, required(name, "아이템 이름", 80));
         item.setDescription(optional(description, 500));
@@ -297,7 +347,11 @@ public class GameAuthoringService {
         item.setItemType(itemType == null ? ItemType.CUSTOM : itemType);
         item.setClueText(optional(clueText, 2_000));
         item.setQrEnabled(qrEnabled);
+        item.setInitiallyOwned(initiallyOwned);
+        item.setCopyableText(optionalOrNull(copyableText, 1_000));
         item.setImageUrl(validatedUploadUrl(imageUrl));
+        item.setAlternateRequiredItem(validatedItemKey(gameId, alternateRequiredItem));
+        item.setAlternateScanText(optionalOrNull(alternateScanText, 4_000));
         return items.save(item);
     }
 
@@ -306,13 +360,35 @@ public class GameAuthoringService {
                                String name, String description, String emoji) {
         GameItem existing = ownedItem(gameId, itemId, owner);
         return updateItem(gameId, itemId, owner, existing.getItemType(), name, description,
-                existing.getClueText(), emoji, existing.isQrEnabled(), null);
+                existing.getClueText(), emoji, existing.isQrEnabled(), existing.isInitiallyOwned(),
+                existing.getCopyableText(), null);
     }
 
     @Transactional
     public GameItem updateItem(Long gameId, Long itemId, UserAccount owner, ItemType itemType,
                                String name, String description, String clueText, String emoji,
                                boolean qrEnabled, String newImageUrl) {
+        GameItem existing = ownedItem(gameId, itemId, owner);
+        return updateItem(gameId, itemId, owner, itemType, name, description, clueText, emoji,
+                qrEnabled, existing.isInitiallyOwned(), existing.getCopyableText(), newImageUrl);
+    }
+
+    @Transactional
+    public GameItem updateItem(Long gameId, Long itemId, UserAccount owner, ItemType itemType,
+                               String name, String description, String clueText, String emoji,
+                               boolean qrEnabled, boolean initiallyOwned, String copyableText,
+                               String newImageUrl) {
+        GameItem existing = ownedItem(gameId, itemId, owner);
+        return updateItem(gameId, itemId, owner, itemType, name, description, clueText, emoji,
+                qrEnabled, initiallyOwned, copyableText, newImageUrl,
+                existing.getAlternateRequiredItem(), existing.getAlternateScanText());
+    }
+
+    @Transactional
+    public GameItem updateItem(Long gameId, Long itemId, UserAccount owner, ItemType itemType,
+                               String name, String description, String clueText, String emoji,
+                               boolean qrEnabled, boolean initiallyOwned, String copyableText,
+                               String newImageUrl, String alternateRequiredItem, String alternateScanText) {
         ownedGame(gameId, owner);
         GameItem item = items.findByIdAndGameId(itemId, gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -322,6 +398,14 @@ public class GameAuthoringService {
         item.setItemType(itemType == null ? ItemType.CUSTOM : itemType);
         item.setClueText(optional(clueText, 2_000));
         item.setQrEnabled(qrEnabled);
+        item.setInitiallyOwned(initiallyOwned);
+        item.setCopyableText(optionalOrNull(copyableText, 1_000));
+        String conditionKey = validatedItemKey(gameId, alternateRequiredItem);
+        if (item.getStableKey().equals(conditionKey)) {
+            throw new IllegalArgumentException("아이템 자신을 대체 QR 장면 조건으로 사용할 수 없습니다.");
+        }
+        item.setAlternateRequiredItem(conditionKey);
+        item.setAlternateScanText(optionalOrNull(alternateScanText, 4_000));
         if (newImageUrl != null && !newImageUrl.isBlank()) item.setImageUrl(validatedUploadUrl(newImageUrl));
         return item;
     }
@@ -339,8 +423,17 @@ public class GameAuthoringService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Long gameId = item.getGame().getId();
         for (GameStage stage : stages.findAllByGameIdOrderByPositionAsc(gameId)) {
-            if (item.getStableKey().equals(stage.getRequiredItem())) stage.setRequiredItem(null);
+            if (stage.getRequiredItems().contains(item.getStableKey())) {
+                stage.setRequiredItems(stage.getRequiredItems().stream()
+                        .filter(key -> !item.getStableKey().equals(key)).toList());
+            }
             if (item.getStableKey().equals(stage.getRewardItem())) stage.setRewardItem(null);
+        }
+        for (GameItem candidate : items.findAllByGameIdOrderByIdAsc(gameId)) {
+            if (item.getStableKey().equals(candidate.getAlternateRequiredItem())) {
+                candidate.setAlternateRequiredItem(null);
+                candidate.setAlternateScanText(null);
+            }
         }
         items.delete(item);
         return gameId;
@@ -352,8 +445,17 @@ public class GameAuthoringService {
         GameItem item = items.findByIdAndGameId(itemId, gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         for (GameStage stage : stages.findAllByGameIdOrderByPositionAsc(gameId)) {
-            if (item.getStableKey().equals(stage.getRequiredItem())) stage.setRequiredItem(null);
+            if (stage.getRequiredItems().contains(item.getStableKey())) {
+                stage.setRequiredItems(stage.getRequiredItems().stream()
+                        .filter(key -> !item.getStableKey().equals(key)).toList());
+            }
             if (item.getStableKey().equals(stage.getRewardItem())) stage.setRewardItem(null);
+        }
+        for (GameItem candidate : items.findAllByGameIdOrderByIdAsc(gameId)) {
+            if (item.getStableKey().equals(candidate.getAlternateRequiredItem())) {
+                candidate.setAlternateRequiredItem(null);
+                candidate.setAlternateScanText(null);
+            }
         }
         items.delete(item);
         return gameId;
@@ -413,7 +515,19 @@ public class GameAuthoringService {
         stage.setDraftAnswer(optionalOrNull(draft.draftAnswer(), 500));
         stage.setOptionsText(optionalOrNull(draft.optionsText(), 2_000));
         stage.setLockLength(clamp(draft.lockLength(), 1, 12));
-        stage.setRequiredItem(optionalOrNull(draft.requiredItem(), 36));
+        List<String> requiredItems = draft.requiredItems() == null ? List.of() : draft.requiredItems().stream()
+                .map(value -> optionalOrNull(value, 36))
+                .filter(Objects::nonNull)
+                .distinct()
+                .limit(30)
+                .toList();
+        if (requiredItems.isEmpty()) {
+            String requiredItem = optionalOrNull(draft.requiredItem(), 36);
+            stage.setRequiredItems(requiredItem == null ? List.of() : List.of(requiredItem));
+        } else {
+            stage.setRequiredItems(requiredItems);
+        }
+        stage.setConsumeRequiredItems(draft.consumeRequiredItems());
         stage.setRewardItem(optionalOrNull(draft.rewardItem(), 36));
         stage.setQrEnabled(draft.qrEnabled());
         if (draft.storyEffect() != null) stage.setStoryEffect(draft.storyEffect());
@@ -588,6 +702,14 @@ public class GameAuthoringService {
         String cleaned = optional(value, max);
         return cleaned.isBlank() ? null : cleaned;
     }
+    private String validatedItemKey(Long gameId, String value) {
+        String key = optionalOrNull(value, 36);
+        if (key == null) return null;
+        boolean exists = items.findAllByGameIdOrderByIdAsc(gameId).stream()
+                .anyMatch(item -> item.getStableKey().equals(key));
+        if (!exists) throw new IllegalArgumentException("대체 QR 장면 조건 아이템이 존재하지 않습니다.");
+        return key;
+    }
     private String validatedImageUrl(String value) {
         String cleaned = optional(value, 1000);
         if (cleaned.isBlank()) return null;
@@ -682,13 +804,14 @@ public class GameAuthoringService {
                              boolean qrEnabled,
                              StoryEffect storyEffect, String sceneImageUrl,
                              String sfxUrl, String sfxTitle, String sfxCreator, String sfxLicense,
-                             String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume) {
+                             String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume,
+                             List<String> requiredItems, boolean consumeRequiredItems) {
         public StageDraft(String title, String story, String instruction, String hint,
                           PuzzleType puzzleType, String draftAnswer, String optionsText,
                           int lockLength, String requiredItem, String rewardItem) {
             this(title, story, instruction, hint, puzzleType, draftAnswer, optionsText,
                     lockLength, requiredItem, rewardItem, true, null, null,
-                    null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, null, null, false);
         }
 
         public StageDraft(String title, String story, String instruction, String hint,
@@ -699,7 +822,31 @@ public class GameAuthoringService {
                           String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume) {
             this(title, story, instruction, hint, puzzleType, draftAnswer, optionsText,
                     lockLength, requiredItem, rewardItem, true, storyEffect, sceneImageUrl,
-                    sfxUrl, sfxTitle, sfxCreator, sfxLicense, sfxLicenseUrl, sfxSourceUrl, sfxVolume);
+                    sfxUrl, sfxTitle, sfxCreator, sfxLicense, sfxLicenseUrl, sfxSourceUrl, sfxVolume,
+                    null, false);
+        }
+
+        public StageDraft(String title, String story, String instruction, String hint,
+                          PuzzleType puzzleType, String draftAnswer, String optionsText,
+                          int lockLength, String requiredItem, String rewardItem,
+                          boolean qrEnabled,
+                          StoryEffect storyEffect, String sceneImageUrl,
+                          String sfxUrl, String sfxTitle, String sfxCreator, String sfxLicense,
+                          String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume) {
+            this(title, story, instruction, hint, puzzleType, draftAnswer, optionsText,
+                    lockLength, requiredItem, rewardItem, qrEnabled, storyEffect, sceneImageUrl,
+                    sfxUrl, sfxTitle, sfxCreator, sfxLicense, sfxLicenseUrl, sfxSourceUrl, sfxVolume,
+                    null, false);
+        }
+
+        public StageDraft(String title, String story, String instruction, String hint,
+                          PuzzleType puzzleType, String draftAnswer, String optionsText,
+                          int lockLength, List<String> requiredItems, String rewardItem,
+                          boolean consumeRequiredItems) {
+            this(title, story, instruction, hint, puzzleType, draftAnswer, optionsText,
+                    lockLength, null, rewardItem, true, null, null,
+                    null, null, null, null, null, null, null,
+                    requiredItems, consumeRequiredItems);
         }
     }
 

@@ -71,6 +71,9 @@ class PlatformWebIntegrationTest {
 
     @Test
     void publicPagesAreOpenButMakerDashboardRedirectsToLogin() throws Exception {
+        mvc.perform(get("/health"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("ok"));
         mvc.perform(get("/"))
                 .andExpect(status().isOk());
         mvc.perform(get("/games"))

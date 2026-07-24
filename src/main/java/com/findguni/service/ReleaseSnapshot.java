@@ -32,7 +32,10 @@ public record ReleaseSnapshot(
         Difficulty difficulty,
         int estimatedMinutes,
         List<StageSnapshot> stages,
-        List<ItemSnapshot> items) {
+        List<ItemSnapshot> items,
+        Boolean unlimitedHints,
+        Integer hintLimit,
+        Integer hintCooldownSeconds) {
 
     public Long getGameId() { return gameId; }
     public String getSlug() { return slug; }
@@ -63,6 +66,9 @@ public record ReleaseSnapshot(
     public int getEstimatedMinutes() { return estimatedMinutes; }
     public List<StageSnapshot> getStages() { return stages; }
     public List<ItemSnapshot> getItems() { return items; }
+    public boolean isUnlimitedHints() { return unlimitedHints == null || unlimitedHints; }
+    public int getHintLimit() { return hintLimit == null ? 3 : hintLimit; }
+    public int getHintCooldownSeconds() { return hintCooldownSeconds == null ? 0 : hintCooldownSeconds; }
 
     public record StageSnapshot(
             String stableKey,
@@ -76,6 +82,8 @@ public record ReleaseSnapshot(
             List<String> options,
             int lockLength,
             String requiredItem,
+            List<String> requiredItems,
+            boolean consumeRequiredItems,
             String rewardItem,
             boolean qrEnabled,
             StageEntryMode entryMode,
@@ -100,6 +108,11 @@ public record ReleaseSnapshot(
         public List<String> getOptions() { return options; }
         public int getLockLength() { return lockLength; }
         public String getRequiredItem() { return requiredItem; }
+        public List<String> getRequiredItems() {
+            if (requiredItems != null && !requiredItems.isEmpty()) return requiredItems;
+            return requiredItem == null || requiredItem.isBlank() ? List.of() : List.of(requiredItem);
+        }
+        public boolean isConsumeRequiredItems() { return consumeRequiredItems; }
         public String getRewardItem() { return rewardItem; }
         public boolean isQrEnabled() { return qrEnabled; }
         public StageEntryMode getEntryMode() { return entryMode; }
@@ -116,7 +129,9 @@ public record ReleaseSnapshot(
     }
 
     public record ItemSnapshot(String stableKey, String name, String description, String emoji,
-                               ItemType itemType, String imageUrl, String clueText, boolean qrEnabled) {
+                               ItemType itemType, String imageUrl, String clueText, boolean qrEnabled,
+                               boolean initiallyOwned, String copyableText,
+                               String alternateRequiredItem, String alternateScanText) {
         public String getStableKey() { return stableKey; }
         public String getName() { return name; }
         public String getDescription() { return description; }
@@ -125,5 +140,9 @@ public record ReleaseSnapshot(
         public String getImageUrl() { return imageUrl; }
         public String getClueText() { return clueText; }
         public boolean isQrEnabled() { return qrEnabled; }
+        public boolean isInitiallyOwned() { return initiallyOwned; }
+        public String getCopyableText() { return copyableText; }
+        public String getAlternateRequiredItem() { return alternateRequiredItem; }
+        public String getAlternateScanText() { return alternateScanText; }
     }
 }

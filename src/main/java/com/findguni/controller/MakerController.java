@@ -9,6 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,17 +21,20 @@ public class MakerController {
     private final GameAuthoringService authoring;
     private final PublishingService publishing;
     private final QRCodeService qrCodes;
+    private final QrPrintKitService qrPrintKits;
     private final AssetStorageService assets;
     private final AudioStorageService audioStorage;
     private final OpenverseAudioService openverseAudio;
 
     public MakerController(AccountService accounts, GameAuthoringService authoring,
                            PublishingService publishing, QRCodeService qrCodes, AssetStorageService assets,
-                           AudioStorageService audioStorage, OpenverseAudioService openverseAudio) {
+                           QrPrintKitService qrPrintKits, AudioStorageService audioStorage,
+                           OpenverseAudioService openverseAudio) {
         this.accounts = accounts;
         this.authoring = authoring;
         this.publishing = publishing;
         this.qrCodes = qrCodes;
+        this.qrPrintKits = qrPrintKits;
         this.assets = assets;
         this.audioStorage = audioStorage;
         this.openverseAudio = openverseAudio;
@@ -64,9 +68,12 @@ public class MakerController {
                              @RequestParam(defaultValue = "#EC4899") String secondaryColor,
                              @RequestParam(defaultValue = "#0B1020") String backgroundColor,
                              @RequestParam(defaultValue = "🔐") String gameIcon,
-                             @RequestParam(name = "allowNotebook", required = false) List<String> allowNotebookValues,
-                             @RequestParam(name = "allowCluebook", required = false) List<String> allowCluebookValues,
-                             @RequestParam(name = "allowQrScanner", required = false) List<String> allowQrScannerValues,
+                              @RequestParam(name = "allowNotebook", required = false) List<String> allowNotebookValues,
+                              @RequestParam(name = "allowCluebook", required = false) List<String> allowCluebookValues,
+                              @RequestParam(name = "allowQrScanner", required = false) List<String> allowQrScannerValues,
+                              @RequestParam(name = "unlimitedHints", required = false) List<String> unlimitedHintsValues,
+                              @RequestParam(name = "hintLimit", required = false) Integer hintLimit,
+                              @RequestParam(name = "hintCooldownSeconds", required = false) Integer hintCooldownSeconds,
                              @RequestParam(name = "bgmFile", required = false) MultipartFile bgmFile,
                              @RequestParam(name = "bgmUrl", required = false) String bgmUrl,
                              @RequestParam(name = "bgmTitle", required = false) String bgmTitle,
@@ -89,6 +96,7 @@ public class MakerController {
         boolean allowNotebook = anyTrue(allowNotebookValues, true);
         boolean allowCluebook = anyTrue(allowCluebookValues, true);
         boolean allowQrScanner = anyTrue(allowQrScannerValues, true);
+        boolean unlimitedHints = anyTrue(unlimitedHintsValues, true);
         boolean removeBgm = anyTrue(removeBgmValues, false);
         try {
             UserAccount maker = accounts.current(authentication);
@@ -102,9 +110,11 @@ public class MakerController {
                     allowNotebook, allowCluebook, allowQrScanner, theme, difficulty, estimatedMinutes, visibility,
                     selectedBgm, removeBgm ? null : bgmTitle, removeBgm ? null : bgmCreator,
                     removeBgm ? null : bgmLicense, removeBgm ? null : bgmLicenseUrl,
-                    removeBgm ? null : bgmSourceUrl, bgmVolume == null ? 0.55 : bgmVolume,
-                    anyTrue(bgmLoopValues, true), storyTextSpeed == null ? 32 : storyTextSpeed,
-                    anyTrue(enableVignetteValues, true));
+                     removeBgm ? null : bgmSourceUrl, bgmVolume == null ? 0.55 : bgmVolume,
+                     anyTrue(bgmLoopValues, true), storyTextSpeed == null ? 32 : storyTextSpeed,
+                     anyTrue(enableVignetteValues, true), unlimitedHints,
+                     hintLimit == null ? 3 : hintLimit,
+                     hintCooldownSeconds == null ? 0 : hintCooldownSeconds);
             redirect.addFlashAttribute("success", "새 방탈출 초안을 만들었습니다.");
             return "redirect:/maker/games/" + game.getId() + "/edit";
         } catch (IllegalArgumentException e) {
@@ -116,6 +126,8 @@ public class MakerController {
             form.setSecondaryColor(secondaryColor); form.setBackgroundColor(backgroundColor);
             form.setGameIcon(gameIcon); form.setAllowNotebook(allowNotebook);
             form.setAllowCluebook(allowCluebook); form.setAllowQrScanner(allowQrScanner);
+            form.setUnlimitedHints(unlimitedHints); form.setHintLimit(hintLimit == null ? 3 : hintLimit);
+            form.setHintCooldownSeconds(hintCooldownSeconds == null ? 0 : hintCooldownSeconds);
             form.setFlowMode(flowMode);
             form.setBgmUrl(removeBgm ? null : bgmUrl); form.setBgmTitle(removeBgm ? null : bgmTitle);
             form.setBgmCreator(removeBgm ? null : bgmCreator); form.setBgmLicense(removeBgm ? null : bgmLicense);
@@ -161,9 +173,12 @@ public class MakerController {
                              @RequestParam(defaultValue = "#EC4899") String secondaryColor,
                              @RequestParam(defaultValue = "#0B1020") String backgroundColor,
                              @RequestParam(defaultValue = "🔐") String gameIcon,
-                             @RequestParam(name = "allowNotebook", required = false) List<String> allowNotebookValues,
-                             @RequestParam(name = "allowCluebook", required = false) List<String> allowCluebookValues,
-                             @RequestParam(name = "allowQrScanner", required = false) List<String> allowQrScannerValues,
+                              @RequestParam(name = "allowNotebook", required = false) List<String> allowNotebookValues,
+                              @RequestParam(name = "allowCluebook", required = false) List<String> allowCluebookValues,
+                              @RequestParam(name = "allowQrScanner", required = false) List<String> allowQrScannerValues,
+                              @RequestParam(name = "unlimitedHints", required = false) List<String> unlimitedHintsValues,
+                              @RequestParam(name = "hintLimit", required = false) Integer hintLimit,
+                              @RequestParam(name = "hintCooldownSeconds", required = false) Integer hintCooldownSeconds,
                              @RequestParam(name = "bgmFile", required = false) MultipartFile bgmFile,
                              @RequestParam(name = "bgmUrl", required = false) String bgmUrl,
                              @RequestParam(name = "bgmTitle", required = false) String bgmTitle,
@@ -203,10 +218,13 @@ public class MakerController {
                     resolveMetadata(existing.getBgmLicense(), bgmLicense, bgmChanged, removeBgm),
                     resolveMetadata(existing.getBgmLicenseUrl(), bgmLicenseUrl, bgmChanged, removeBgm),
                     resolveMetadata(existing.getBgmSourceUrl(), bgmSourceUrl, bgmChanged, removeBgm),
-                    bgmVolume == null ? existing.getBgmVolume() : bgmVolume,
-                    anyTrueOrExisting(bgmLoopValues, existing.isBgmLoop()),
-                    storyTextSpeed == null ? existing.getStoryTextSpeed() : storyTextSpeed,
-                    anyTrueOrExisting(enableVignetteValues, existing.isEnableVignette()));
+                     bgmVolume == null ? existing.getBgmVolume() : bgmVolume,
+                     anyTrueOrExisting(bgmLoopValues, existing.isBgmLoop()),
+                     storyTextSpeed == null ? existing.getStoryTextSpeed() : storyTextSpeed,
+                     anyTrueOrExisting(enableVignetteValues, existing.isEnableVignette()),
+                     anyTrueOrExisting(unlimitedHintsValues, existing.isUnlimitedHints()),
+                     hintLimit == null ? existing.getHintLimit() : hintLimit,
+                     hintCooldownSeconds == null ? existing.getHintCooldownSeconds() : hintCooldownSeconds);
             if (flowMode != null) authoring.updateFlowMode(id, maker, flowMode);
             redirect.addFlashAttribute("success", "게임 설정을 저장했습니다.");
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -226,6 +244,8 @@ public class MakerController {
                            @RequestParam(defaultValue = "") String optionsText,
                            @RequestParam(defaultValue = "4") int lockLength,
                            @RequestParam(defaultValue = "") String requiredItemId,
+                           @RequestParam(name = "requiredItemIds", required = false) List<String> requiredItemIds,
+                           @RequestParam(name = "consumeRequiredItems", required = false) List<String> consumeRequiredItemValues,
                            @RequestParam(defaultValue = "") String rewardItemId,
                            @RequestParam(name = "qrEnabled", required = false) List<String> qrEnabledValues,
                            @RequestParam(name = "entryMode", defaultValue = "QR") StageEntryMode entryMode,
@@ -258,7 +278,8 @@ public class MakerController {
                     resolveMediaUrl(null, sfxUrl, uploadedSfx, removeSfx),
                     removeSfx ? "" : sfxTitle, removeSfx ? "" : sfxCreator,
                     removeSfx ? "" : sfxLicense, removeSfx ? "" : sfxLicenseUrl,
-                    removeSfx ? "" : sfxSourceUrl, sfxVolume == null ? 0.8 : sfxVolume),
+                    removeSfx ? "" : sfxSourceUrl, sfxVolume == null ? 0.8 : sfxVolume,
+                    requiredItemIds, anyTrue(consumeRequiredItemValues, false)),
                     entryMode, nextStageKey);
             redirect.addFlashAttribute("success", "스테이지를 추가했습니다.");
             return "redirect:/maker/games/" + id + "/edit?tab=stages&edit=" + created.getId();
@@ -277,6 +298,8 @@ public class MakerController {
                               @RequestParam(defaultValue = "") String optionsText,
                               @RequestParam(defaultValue = "4") int lockLength,
                                @RequestParam(defaultValue = "") String requiredItemId,
+                               @RequestParam(name = "requiredItemIds", required = false) List<String> requiredItemIds,
+                               @RequestParam(name = "consumeRequiredItems", required = false) List<String> consumeRequiredItemValues,
                                @RequestParam(defaultValue = "") String rewardItemId,
                                @RequestParam(name = "qrEnabled", required = false) List<String> qrEnabledValues,
                                @RequestParam(name = "entryMode", required = false) StageEntryMode entryMode,
@@ -318,7 +341,8 @@ public class MakerController {
                     resolveMetadata(existing.getSfxLicense(), sfxLicense, sfxChanged, removeSfx),
                     resolveMetadata(existing.getSfxLicenseUrl(), sfxLicenseUrl, sfxChanged, removeSfx),
                     resolveMetadata(existing.getSfxSourceUrl(), sfxSourceUrl, sfxChanged, removeSfx),
-                    sfxVolume == null ? existing.getSfxVolume() : sfxVolume);
+                    sfxVolume == null ? existing.getSfxVolume() : sfxVolume,
+                    requiredItemIds, anyTrueOrExisting(consumeRequiredItemValues, existing.isConsumeRequiredItems()));
             if (gameId == null) authoring.updateStage(stageId, maker, draft, entryMode, nextStageKey);
             else authoring.updateStage(gameId, stageId, maker, draft, entryMode, nextStageKey);
             redirect.addFlashAttribute("success", "스테이지를 저장했습니다.");
@@ -356,6 +380,10 @@ public class MakerController {
                            @RequestParam(defaultValue = "") String clueText,
                            @RequestParam(name = "icon", defaultValue = "🗝️") String icon,
                            @RequestParam(defaultValue = "false") boolean qrEnabled,
+                           @RequestParam(defaultValue = "false") boolean initiallyOwned,
+                           @RequestParam(defaultValue = "") String copyableText,
+                           @RequestParam(defaultValue = "") String alternateRequiredItem,
+                           @RequestParam(defaultValue = "") String alternateScanText,
                            @RequestParam(name = "photo", required = false) MultipartFile photo,
                            RedirectAttributes redirect) {
         try {
@@ -363,7 +391,8 @@ public class MakerController {
             authoring.ownedGame(id, maker);
             String imageUrl = assets.storeItemImage(photo);
             authoring.addItem(id, maker, resolveItemType(itemType, legacyType), name, description,
-                    clueText, icon, qrEnabled, imageUrl);
+                    clueText, icon, qrEnabled, initiallyOwned, copyableText, imageUrl,
+                    alternateRequiredItem, alternateScanText);
             redirect.addFlashAttribute("success", "아이템을 추가했습니다.");
         } catch (IllegalArgumentException | IllegalStateException e) { redirect.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/maker/games/" + id + "/edit";
@@ -378,6 +407,10 @@ public class MakerController {
                              @RequestParam(defaultValue = "") String clueText,
                              @RequestParam(name = "icon", defaultValue = "🗝️") String icon,
                              @RequestParam(defaultValue = "false") boolean qrEnabled,
+                             @RequestParam(defaultValue = "false") boolean initiallyOwned,
+                             @RequestParam(defaultValue = "") String copyableText,
+                             @RequestParam(defaultValue = "") String alternateRequiredItem,
+                             @RequestParam(defaultValue = "") String alternateScanText,
                              @RequestParam(name = "photo", required = false) MultipartFile photo,
                              RedirectAttributes redirect) {
         try {
@@ -386,7 +419,8 @@ public class MakerController {
             String imageUrl = assets.storeItemImage(photo);
             authoring.updateItem(gameId, itemId, maker,
                     resolveItemType(itemType, legacyType, existing.getItemType()), name,
-                    description, clueText, icon, qrEnabled, imageUrl);
+                    description, clueText, icon, qrEnabled, initiallyOwned, copyableText, imageUrl,
+                    alternateRequiredItem, alternateScanText);
             redirect.addFlashAttribute("success", "아이템을 저장했습니다.");
         } catch (IllegalArgumentException | IllegalStateException e) { redirect.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/maker/games/" + gameId + "/edit";
@@ -424,6 +458,43 @@ public class MakerController {
         EscapeGame game = authoring.ownedGame(id, accounts.current(authentication));
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .contentType(MediaType.IMAGE_PNG).body(qrCodes.generateFor(game));
+    }
+
+    @GetMapping("/games/{id}/qr-kit")
+    public String qrKit(@PathVariable Long id, Authentication authentication, Model model) {
+        UserAccount maker = accounts.current(authentication);
+        EscapeGame game = authoring.ownedGame(id, maker);
+        QrPrintKitService.QrKit kit = qrPrintKits.build(game,
+                authoring.stages(id, maker), authoring.items(id, maker));
+        model.addAttribute("game", game);
+        model.addAttribute("kit", kit);
+        model.addAttribute("qrCards", kit.cards());
+        model.addAttribute("qrPages", kit.pages());
+        return "maker/qr-kit";
+    }
+
+    @GetMapping(value = "/games/{id}/qr-kit/print.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @ResponseBody
+    public ResponseEntity<byte[]> qrKitPdf(@PathVariable Long id, Authentication authentication) {
+        QrPrintKitService.QrKit kit = ownedQrKit(id, authentication);
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(kit.slug() + "-qr-kit.pdf", StandardCharsets.UTF_8).build();
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(qrPrintKits.pdf(kit));
+    }
+
+    @GetMapping(value = "/games/{id}/qr-kit/qr-images.zip", produces = "application/zip")
+    @ResponseBody
+    public ResponseEntity<byte[]> qrKitZip(@PathVariable Long id, Authentication authentication) {
+        QrPrintKitService.QrKit kit = ownedQrKit(id, authentication);
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(kit.slug() + "-qr-images.zip", StandardCharsets.UTF_8).build();
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(qrPrintKits.zip(kit));
     }
 
     @GetMapping(value = "/audio/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -483,6 +554,12 @@ public class MakerController {
         model.addAttribute("stageEntryModes", StageEntryMode.values());
     }
 
+    private QrPrintKitService.QrKit ownedQrKit(Long gameId, Authentication authentication) {
+        UserAccount maker = accounts.current(authentication);
+        EscapeGame game = authoring.ownedGame(gameId, maker);
+        return qrPrintKits.build(game, authoring.stages(gameId, maker), authoring.items(gameId, maker));
+    }
+
     private void addGameEnums(Model model) {
         model.addAttribute("themes", GameTheme.values());
         model.addAttribute("difficulties", Difficulty.values());
@@ -514,11 +591,12 @@ public class MakerController {
             int lockLength, String requiredItem, String rewardItem, boolean qrEnabled,
             StoryEffect storyEffect,
             String sceneImageUrl, String sfxUrl, String sfxTitle, String sfxCreator,
-            String sfxLicense, String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume) {
+            String sfxLicense, String sfxLicenseUrl, String sfxSourceUrl, Double sfxVolume,
+            List<String> requiredItems, boolean consumeRequiredItems) {
         return new GameAuthoringService.StageDraft(title, story, instruction, hint, puzzleType,
                 draftAnswer, optionsText, lockLength, blankToNull(requiredItem), blankToNull(rewardItem),
                 qrEnabled, storyEffect, sceneImageUrl, sfxUrl, sfxTitle, sfxCreator, sfxLicense,
-                sfxLicenseUrl, sfxSourceUrl, sfxVolume);
+                sfxLicenseUrl, sfxSourceUrl, sfxVolume, requiredItems, consumeRequiredItems);
     }
 
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }

@@ -16,6 +16,7 @@ public class SeedDataConfig {
             GameAuthoringService authoring,
             PublishingService publishing,
             DemoGameSeedService demoGames,
+            DubuHousewarmingSeedService dubuHousewarming,
             EscapeGameRepository games,
             @Value("${findguni.seed.admin.enabled:true}") boolean adminEnabled,
             @Value("${findguni.seed.admin.email}") String adminEmail,
@@ -38,6 +39,7 @@ public class SeedDataConfig {
                     publishing.publish(game.getId(), demo);
                 }
                 demoGames.ensureGuniRescueDemo();
+                dubuHousewarming.ensureDubuHousewarming();
             }
         };
     }

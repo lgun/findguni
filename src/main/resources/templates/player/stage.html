@@ -51,38 +51,75 @@
         <form th:action="@{/play/{slug}/solve(slug=${game.slug})}" method="post" class="stack">
             <input type="hidden" name="answer" value="">
 
+            <section class="recipe-checklist" th:if="${requiredItems != null and !#lists.isEmpty(requiredItems)}" aria-label="필요한 아이템">
+                <div class="recipe-checklist__head">
+                    <strong th:text="${stage.consumeRequiredItems and #lists.size(requiredItems) > 1 ? '조합할 재료' : '필요한 아이템'}">필요한 아이템</strong>
+                    <span th:text="|${#lists.size(requiredItems.?[owned])}/${#lists.size(requiredItems)} 준비|">0/5 준비</span>
+                </div>
+                <ul>
+                    <li th:each="required : ${requiredItems}" th:classappend="${required.owned} ? ' is-owned' : ' is-missing'">
+                        <span aria-hidden="true" th:text="${required.item.emoji}">🎁</span>
+                        <strong th:text="${required.item.name}">아이템</strong>
+                        <small th:text="${required.owned ? '준비됨' : '아직 없음'}">아직 없음</small>
+                    </li>
+                </ul>
+                <p th:if="${stage.consumeRequiredItems}">완료하면 표시된 아이템은 가방에서 사용 처리됩니다.</p>
+            </section>
+
             <div th:if="${stage.puzzleType.name() == 'STORY'}">
                 <p class="muted" style="text-align:center">이야기를 모두 읽었다면 다음 장면으로 이동하세요.</p>
                 <input type="hidden" data-answer-source value="continue" aria-hidden="true">
             </div>
 
             <div th:if="${stage.puzzleType.name() == 'NUMBER_LOCK'}">
-                <div class="lock-face" aria-label="숫자 휠 자물쇠">
-                    <div class="wheel" data-wheel="number" data-value="0" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="0" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
-                        <button class="wheel__control" type="button" data-wheel-move="1" aria-label="숫자 올리기">▲</button>
-                        <span class="wheel__value" data-wheel-value aria-hidden="true">0</span>
-                        <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="숫자 내리기">▼</button>
+                <div class="combination-lock" aria-label="숫자 다이얼 자물쇠">
+                    <div class="combination-lock__shackle" aria-hidden="true"></div>
+                    <div class="combination-lock__body">
+                        <i class="lock-screw lock-screw--tl" aria-hidden="true"></i><i class="lock-screw lock-screw--tr" aria-hidden="true"></i><i class="lock-screw lock-screw--bl" aria-hidden="true"></i><i class="lock-screw lock-screw--br" aria-hidden="true"></i>
+                        <div class="combination-lock__brand" aria-hidden="true"><span>FINDGUNI</span><small>COMBINATION LOCK</small></div>
+                        <div class="lock-face">
+                            <span class="lock-face__index" aria-hidden="true"></span>
+                            <div class="wheel" data-wheel="number" data-value="0" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="0" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
+                                <button class="wheel__control" type="button" data-wheel-move="1" aria-label="숫자 올리기">▴</button>
+                                <div class="wheel__window" aria-hidden="true"><span class="wheel__neighbor" data-wheel-prev>9</span><span class="wheel__value" data-wheel-value>0</span><span class="wheel__neighbor" data-wheel-next>1</span></div>
+                                <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="숫자 내리기">▾</button>
+                            </div>
+                        </div>
+                        <p class="combination-lock__help">다이얼을 위아래로 밀거나 눌러 돌리세요</p>
                     </div>
                 </div>
             </div>
 
             <div th:if="${stage.puzzleType.name() == 'ALPHABET_LOCK'}">
-                <div class="lock-face" aria-label="알파벳 휠 자물쇠">
-                    <div class="wheel" data-wheel="alphabet" data-value="A" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="25" aria-valuenow="0" aria-valuetext="A" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
-                        <button class="wheel__control" type="button" data-wheel-move="1" aria-label="글자 올리기">▲</button>
-                        <span class="wheel__value" data-wheel-value aria-hidden="true">A</span>
-                        <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="글자 내리기">▼</button>
+                <div class="combination-lock combination-lock--alphabet" aria-label="알파벳 다이얼 자물쇠">
+                    <div class="combination-lock__shackle" aria-hidden="true"></div>
+                    <div class="combination-lock__body">
+                        <i class="lock-screw lock-screw--tl" aria-hidden="true"></i><i class="lock-screw lock-screw--tr" aria-hidden="true"></i><i class="lock-screw lock-screw--bl" aria-hidden="true"></i><i class="lock-screw lock-screw--br" aria-hidden="true"></i>
+                        <div class="combination-lock__brand" aria-hidden="true"><span>FINDGUNI</span><small>LETTER LOCK</small></div>
+                        <div class="lock-face">
+                            <span class="lock-face__index" aria-hidden="true"></span>
+                            <div class="wheel" data-wheel="alphabet" data-value="A" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="25" aria-valuenow="0" aria-valuetext="A" th:each="i : ${#numbers.sequence(1, stage.lockLength)}">
+                                <button class="wheel__control" type="button" data-wheel-move="1" aria-label="글자 올리기">▴</button>
+                                <div class="wheel__window" aria-hidden="true"><span class="wheel__neighbor" data-wheel-prev>Z</span><span class="wheel__value" data-wheel-value>A</span><span class="wheel__neighbor" data-wheel-next>B</span></div>
+                                <button class="wheel__control" type="button" data-wheel-move="-1" aria-label="글자 내리기">▾</button>
+                            </div>
+                        </div>
+                        <p class="combination-lock__help">다이얼을 위아래로 밀거나 눌러 돌리세요</p>
                     </div>
                 </div>
             </div>
 
             <div th:if="${stage.puzzleType.name() == 'KEYPAD'}">
-                <div class="keypad-display" data-keypad-display aria-live="polite">····</div>
-                <div class="keypad" aria-label="숫자 키패드">
-                    <button class="keypad__key" type="button" data-keypad-key="1">1</button><button class="keypad__key" type="button" data-keypad-key="2">2</button><button class="keypad__key" type="button" data-keypad-key="3">3</button>
-                    <button class="keypad__key" type="button" data-keypad-key="4">4</button><button class="keypad__key" type="button" data-keypad-key="5">5</button><button class="keypad__key" type="button" data-keypad-key="6">6</button>
-                    <button class="keypad__key" type="button" data-keypad-key="7">7</button><button class="keypad__key" type="button" data-keypad-key="8">8</button><button class="keypad__key" type="button" data-keypad-key="9">9</button>
-                    <button class="keypad__key" type="button" data-keypad-key="clear" aria-label="전체 지우기">C</button><button class="keypad__key" type="button" data-keypad-key="0">0</button><button class="keypad__key" type="button" data-keypad-key="delete" aria-label="한 자리 지우기">⌫</button>
+                <div class="door-keypad" aria-label="벽면 숫자 도어락">
+                    <i class="lock-screw lock-screw--tl" aria-hidden="true"></i><i class="lock-screw lock-screw--tr" aria-hidden="true"></i><i class="lock-screw lock-screw--bl" aria-hidden="true"></i><i class="lock-screw lock-screw--br" aria-hidden="true"></i>
+                    <div class="door-keypad__header"><span class="door-keypad__led" aria-hidden="true"></span><strong>SECURE</strong><small>PIN ACCESS</small></div>
+                    <div class="keypad-display" data-keypad-display aria-live="polite">····</div>
+                    <div class="keypad" aria-label="숫자 키패드">
+                        <button class="keypad__key" type="button" data-keypad-key="1">1</button><button class="keypad__key" type="button" data-keypad-key="2">2</button><button class="keypad__key" type="button" data-keypad-key="3">3</button>
+                        <button class="keypad__key" type="button" data-keypad-key="4">4</button><button class="keypad__key" type="button" data-keypad-key="5">5</button><button class="keypad__key" type="button" data-keypad-key="6">6</button>
+                        <button class="keypad__key" type="button" data-keypad-key="7">7</button><button class="keypad__key" type="button" data-keypad-key="8">8</button><button class="keypad__key" type="button" data-keypad-key="9">9</button>
+                        <button class="keypad__key keypad__key--utility" type="button" data-keypad-key="clear" aria-label="전체 지우기">C</button><button class="keypad__key" type="button" data-keypad-key="0">0</button><button class="keypad__key keypad__key--utility" type="button" data-keypad-key="delete" aria-label="한 자리 지우기">⌫</button>
+                    </div>
                 </div>
             </div>
 
@@ -112,22 +149,27 @@
             </div>
 
             <div class="answer-row" th:if="${stage.puzzleType.name() == 'TEXT_ANSWER'}">
-                <label class="sr-only" for="text-answer">정답</label>
-                <input class="input" id="text-answer" data-answer-source autocomplete="off" placeholder="정답을 입력하세요" required>
+                <div class="access-lock">
+                    <i class="lock-screw lock-screw--tl" aria-hidden="true"></i><i class="lock-screw lock-screw--tr" aria-hidden="true"></i><i class="lock-screw lock-screw--bl" aria-hidden="true"></i><i class="lock-screw lock-screw--br" aria-hidden="true"></i>
+                    <div class="access-lock__header"><span class="access-lock__sensor" aria-hidden="true"></span><div><strong>ACCESS CODE</strong><small>문자·숫자 비밀번호</small></div></div>
+                    <label class="access-lock__label" for="text-answer">비밀번호</label>
+                    <div class="access-lock__screen"><input id="text-answer" data-answer-source maxlength="1000" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="입력하거나 붙여넣기" required><button type="button" data-paste-answer>붙여넣기</button></div>
+                    <p class="access-lock__help">긴 비밀번호는 가방에서 복사해 그대로 붙여넣을 수 있습니다.</p>
+                </div>
             </div>
 
             <p class="puzzle-status" data-puzzle-status aria-live="polite"></p>
-            <button class="btn btn--block" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}" th:text="${stage.puzzleType.name() == 'STORY' ? '다음 장면으로' : '자물쇠 열기'}">자물쇠 열기</button>
+            <button class="btn btn--block" th:classappend="${stage.puzzleType.name() != 'STORY' ? 'lock-release' : ''}" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}"><span class="lock-release__bolt" th:if="${stage.puzzleType.name() != 'STORY'}" aria-hidden="true"></span><span th:text="${stage.puzzleType.name() == 'STORY' ? (stage.consumeRequiredItems and requiredItems != null and #lists.size(requiredItems) > 1 ? '아이템 조합하기' : (stage.consumeRequiredItems ? '아이템 건네기' : '다음 장면으로')) : '자물쇠 열기'}">자물쇠 열기</span></button>
         </form>
     </section>
 
     <section class="hint-card" th:if="${hintRevealed}" aria-labelledby="hint-title">
-        <h2 id="hint-title">힌트</h2><p th:text="${revealedHint != null ? revealedHint : stage.hint}">힌트 내용</p>
+        <h2 id="hint-title" th:text="${game.slug == 'dubu-housewarming' ? '살짝 힌트' : '힌트'}">힌트</h2><p th:text="${revealedHint != null ? revealedHint : stage.hint}">힌트 내용</p><small class="muted" th:text="${hintAvailability.statusText}">이미 확인한 힌트입니다.</small>
     </section>
 
     <section class="card hint-prompt" th:unless="${hintRevealed}" aria-label="힌트">
-        <div><strong>막혔나요?</strong><span class="muted" th:text="|시도 ${attemptCount != null ? attemptCount : 0}회|">시도 0회</span></div>
-        <form th:action="@{/play/{slug}/hint(slug=${game.slug})}" method="post"><button class="btn btn--secondary btn--small" type="submit">힌트 보기</button></form>
+        <div><strong th:text="${game.slug == 'dubu-housewarming' ? '조금 막혔나요?' : '막혔나요?'}">막혔나요?</strong><span class="muted" data-hint-policy-status th:text="${hintAvailability.statusText}">힌트 사용 정책</span></div>
+        <form th:action="@{/play/{slug}/hint(slug=${game.slug})}" method="post"><button class="btn btn--secondary btn--small" type="submit" th:disabled="${!hintAvailability.allowed}" th:attr="data-hint-wait-seconds=${hintAvailability.retryAfterSeconds},data-hint-ready-label=${game.slug == 'dubu-housewarming' ? '힌트 하나 보기' : '힌트 보기'}" th:text="${hintAvailability.retryAfterSeconds > 0 ? hintAvailability.retryAfterSeconds + '초 후 사용' : (game.slug == 'dubu-housewarming' ? '힌트 하나 보기' : '힌트 보기')}">힌트 보기</button></form>
     </section>
 </main>
 
@@ -160,7 +202,7 @@
             <ul class="tool-card-list" th:unless="${inventory == null or #lists.isEmpty(inventory)}">
                 <li class="tool-item-card" th:each="item : ${inventory}">
                     <div class="tool-item-card__media"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="|${item.name} 이미지|"><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}" aria-hidden="true">◇</span></div>
-                    <div><strong th:text="${item.name}">아이템</strong><p th:text="${item.clueText != null and !#strings.isEmpty(item.clueText) ? item.clueText : item.description}">아이템 설명 또는 단서</p></div>
+                    <div><strong th:text="${item.name}">아이템</strong><p th:text="${item.clueText != null and !#strings.isEmpty(item.clueText) ? item.clueText : item.description}">아이템 설명 또는 단서</p><a class="item-image-link" th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:href="${item.imageUrl}" target="_blank" rel="noopener">이미지 크게 보기</a><div class="copyable-item" th:if="${item.copyableText != null and !#strings.isEmpty(item.copyableText)}"><code th:text="${item.copyableText}">copy me</code><button class="btn btn--secondary btn--small" type="button" data-copy-text th:attr="data-copy-value=${item.copyableText}">복사하기</button><span data-copy-status role="status" aria-live="polite"></span></div></div>
                 </li>
             </ul>
         </section>

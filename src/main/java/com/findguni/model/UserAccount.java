@@ -1,6 +1,8 @@
 package com.findguni.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
@@ -20,10 +22,12 @@ public class UserAccount {
     private String displayName;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private Role role = Role.MAKER;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private AccountStatus status = AccountStatus.ACTIVE;
 

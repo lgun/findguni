@@ -3,10 +3,12 @@ package com.findguni.service;
 import com.findguni.model.Difficulty;
 import com.findguni.model.EscapeGame;
 import com.findguni.model.GameItem;
+import com.findguni.model.GameFlowMode;
 import com.findguni.model.GameTheme;
 import com.findguni.model.GameVisibility;
 import com.findguni.model.ItemType;
 import com.findguni.model.PlaySession;
+import com.findguni.model.PuzzleType;
 import com.findguni.model.UserAccount;
 import com.findguni.repository.ScannedClueRepository;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -124,6 +127,97 @@ class PlayerToolsIntegrationTest {
                 .isEmpty();
     }
 
+    @Test
+    void limitedHintsAreCountedOncePerStageAndCannotExceedTheSessionLimit() {
+        EscapeGame game = publishHintGame(false, 1, 0, "hint-limit");
+        String deviceHash = "device-hash-hint-limit";
+        plays.startOrResume(game.getSlug(), deviceHash);
+
+        PlayService.HintRevealResult first = plays.revealHint(game.getSlug(), deviceHash);
+        PlayService.HintRevealResult repeated = plays.revealHint(game.getSlug(), deviceHash);
+
+        assertThat(first.revealed()).isTrue();
+        assertThat(first.newlyConsumed()).isTrue();
+        assertThat(repeated.revealed()).isTrue();
+        assertThat(repeated.newlyConsumed()).isFalse();
+        assertThat(plays.current(game.getSlug(), deviceHash).session().getHintsUsed()).isEqualTo(1);
+
+        assertThat(plays.solve(game.getSlug(), deviceHash, "").success()).isTrue();
+        PlayService.HintAvailability exhausted = plays.hintAvailability(plays.current(game.getSlug(), deviceHash));
+        assertThat(exhausted.allowed()).isFalse();
+        assertThat(exhausted.remainingHints()).isZero();
+        assertThat(plays.revealHint(game.getSlug(), deviceHash).message()).contains("모두 썼습니다");
+    }
+
+    @Test
+    void unlimitedHintsCanStillRequireACooldownBetweenDifferentStages() {
+        EscapeGame game = publishHintGame(true, 3, 60, "hint-cooldown");
+        String deviceHash = "device-hash-hint-cooldown";
+        plays.startOrResume(game.getSlug(), deviceHash);
+
+        assertThat(plays.revealHint(game.getSlug(), deviceHash).revealed()).isTrue();
+        assertThat(plays.solve(game.getSlug(), deviceHash, "").success()).isTrue();
+
+        PlayService.HintAvailability waiting = plays.hintAvailability(plays.current(game.getSlug(), deviceHash));
+        assertThat(waiting.unlimited()).isTrue();
+        assertThat(waiting.allowed()).isFalse();
+        assertThat(waiting.retryAfterSeconds()).isBetween(1, 60);
+        assertThat(plays.revealHint(game.getSlug(), deviceHash).message()).contains("초 후");
+    }
+
+    @Test
+    void unlimitedHintsWithoutCooldownCanBeUsedImmediatelyOnEveryStage() {
+        EscapeGame game = publishHintGame(true, 3, 0, "hint-unlimited");
+        String deviceHash = "device-hash-hint-unlimited";
+        plays.startOrResume(game.getSlug(), deviceHash);
+
+        assertThat(plays.revealHint(game.getSlug(), deviceHash).revealed()).isTrue();
+        assertThat(plays.solve(game.getSlug(), deviceHash, "").success()).isTrue();
+        assertThat(plays.hintAvailability(plays.current(game.getSlug(), deviceHash)).allowed()).isTrue();
+        assertThat(plays.revealHint(game.getSlug(), deviceHash).revealed()).isTrue();
+        assertThat(plays.current(game.getSlug(), deviceHash).session().getHintsUsed()).isEqualTo(2);
+    }
+
+    @Test
+    void combinationStageRequiresAllMaterialsConsumesThemAndDoesNotAllowQrRespawn() {
+        UserAccount owner = signup("combination");
+        EscapeGame game = authoring.create(owner, "조합 기능", uniqueSlug("combination"), "BLANK",
+                GameTheme.MIDNIGHT, Difficulty.NORMAL, 30, GameFlowMode.LINEAR);
+        GameItem materialA = authoring.addItem(game.getId(), owner, ItemType.FOOD,
+                "재료 A", "", "", "A", true, null);
+        GameItem materialB = authoring.addItem(game.getId(), owner, ItemType.TOOL,
+                "재료 B", "", "", "B", true, null);
+        GameItem result = authoring.addItem(game.getId(), owner, ItemType.CUSTOM,
+                "완성품", "", "", "C", false, null);
+        var stage = authoring.stages(game.getId(), owner).get(0);
+        authoring.updateStage(stage.getId(), owner, new GameAuthoringService.StageDraft(
+                "조합소", "", "", "", PuzzleType.STORY, "", "", 4,
+                List.of(materialA.getStableKey(), materialB.getStableKey()),
+                result.getStableKey(), true));
+        authoring.addStage(game.getId(), owner, new GameAuthoringService.StageDraft(
+                "마침", "", "", "", PuzzleType.STORY, "", "", 4, null, null));
+        publishing.publish(game.getId(), owner);
+
+        String device = "combination-device";
+        plays.startOrResume(game.getSlug(), device);
+        plays.scanClue(game.getSlug(), device, materialA.getStableKey());
+        assertThat(plays.solve(game.getSlug(), device, "").success()).isFalse();
+        assertThat(plays.requiredItemViews(plays.current(game.getSlug(), device)))
+                .extracting(PlayService.RequiredItemView::isOwned)
+                .containsExactly(true, false);
+
+        plays.scanClue(game.getSlug(), device, materialB.getStableKey());
+        assertThat(plays.solve(game.getSlug(), device, "").success()).isTrue();
+        assertThat(plays.current(game.getSlug(), device).inventory())
+                .extracting(ReleaseSnapshot.ItemSnapshot::name)
+                .containsExactly("완성품");
+
+        plays.scanClue(game.getSlug(), device, materialA.getStableKey());
+        assertThat(plays.current(game.getSlug(), device).inventory())
+                .extracting(ReleaseSnapshot.ItemSnapshot::name)
+                .containsExactly("완성품");
+    }
+
     private PublishedGame publishGame(boolean notebook, boolean cluebook, boolean scanner, String prefix) {
         UserAccount owner = signup(prefix);
         EscapeGame game = authoring.create(owner, prefix, uniqueSlug(prefix), "QUICK_10",
@@ -136,6 +230,20 @@ class PlayerToolsIntegrationTest {
                 "Found by scanning", "Look underneath the clock", "🔎", true, null);
         publishing.publish(game.getId(), owner);
         return new PublishedGame(game, item);
+    }
+
+    private EscapeGame publishHintGame(boolean unlimited, int limit, int cooldownSeconds, String prefix) {
+        UserAccount owner = signup(prefix);
+        EscapeGame game = authoring.create(owner, prefix, uniqueSlug(prefix), "BLANK",
+                GameTheme.MIDNIGHT, Difficulty.NORMAL, 30, GameFlowMode.LINEAR);
+        var first = authoring.stages(game.getId(), owner).get(0);
+        authoring.updateStage(first.getId(), owner, new GameAuthoringService.StageDraft(
+                "첫 문제", "", "", "첫 힌트", PuzzleType.STORY, "", "", 4, null, null));
+        authoring.addStage(game.getId(), owner, new GameAuthoringService.StageDraft(
+                "둘째 문제", "", "", "둘째 힌트", PuzzleType.STORY, "", "", 4, null, null));
+        authoring.updateHintPolicy(game.getId(), owner, unlimited, limit, cooldownSeconds);
+        publishing.publish(game.getId(), owner);
+        return game;
     }
 
     private UserAccount signup(String prefix) {

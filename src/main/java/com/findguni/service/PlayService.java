@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -111,8 +112,8 @@ public class PlayService {
             return new SolveResult(true, true, null);
         }
         ReleaseSnapshot.StageSnapshot stage = snapshot.stages().get(session.getProgressIndex());
-        Set<String> inventory = inventoryKeys(session);
-        if (stage.requiredItem() != null && !inventory.contains(stage.requiredItem())) {
+        LinkedHashSet<String> inventory = inventoryKeys(session);
+        if (!inventory.containsAll(requiredItemKeys(stage))) {
             session.recordFailedAttempt();
             attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, false));
             return new SolveResult(false, false, "먼저 필요한 아이템을 찾아야 합니다.");
@@ -124,10 +125,7 @@ public class PlayService {
             session.recordFailedAttempt();
             return new SolveResult(false, false, "자물쇠가 열리지 않았습니다. 단서를 다시 살펴보세요.");
         }
-        if (stage.rewardItem() != null) {
-            inventory.add(stage.rewardItem());
-            session.setInventoryJson(writeInventory(inventory));
-        }
+        applyItemExchange(session, stage, inventory);
         session.advance();
         boolean completed = session.getProgressIndex() >= snapshot.stages().size();
         if (completed) session.complete();
@@ -135,7 +133,7 @@ public class PlayService {
     }
 
     @Transactional
-    public String revealHint(String slug, String deviceHash) {
+    public HintRevealResult revealHint(String slug, String deviceHash) {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         PlaySession session = activeSession(deviceHash, game.getId());
@@ -145,14 +143,64 @@ public class PlayService {
             stage = snapshot.stages().stream()
                     .filter(candidate -> Objects.equals(candidate.stableKey(), session.getActiveStageKey()))
                     .findFirst().orElse(null);
-            if (stage == null) return "";
+            if (stage == null) return new HintRevealResult(false, false, "", "먼저 문제를 열어 주세요.");
         } else {
-            if (session.getProgressIndex() >= snapshot.stages().size()) return "";
+            if (session.getProgressIndex() >= snapshot.stages().size()) {
+                return new HintRevealResult(false, false, "", "현재 열 수 있는 힌트가 없습니다.");
+            }
             stage = snapshot.stages().get(session.getProgressIndex());
         }
-        session.recordHint();
+
+        HintAvailability availability = hintAvailability(snapshot, session, stage);
+        if (availability.alreadyRevealed()) {
+            return new HintRevealResult(true, false, stage.hint(), "이미 확인한 힌트를 다시 열었습니다.");
+        }
+        if (!availability.allowed()) {
+            return new HintRevealResult(false, false, "", availability.statusText());
+        }
+
+        LinkedHashSet<String> revealedHints = stageKeys(session.getRevealedHintsJson());
+        revealedHints.add(stage.stableKey());
+        session.recordHint(writeKeys(revealedHints));
         attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.HINT, true));
-        return stage.hint();
+        return new HintRevealResult(true, true, stage.hint(), "힌트를 열었습니다.");
+    }
+
+    public HintAvailability hintAvailability(PlayView view) {
+        return hintAvailability(view.game(), view.session(), view.stage());
+    }
+
+    private HintAvailability hintAvailability(ReleaseSnapshot snapshot, PlaySession session,
+                                              ReleaseSnapshot.StageSnapshot stage) {
+        boolean unlimited = snapshot.isUnlimitedHints();
+        int limit = Math.max(1, snapshot.getHintLimit());
+        int remaining = unlimited ? -1 : Math.max(0, limit - session.getHintsUsed());
+        int cooldown = Math.max(0, snapshot.getHintCooldownSeconds());
+        boolean hasHint = stage != null && stage.hint() != null && !stage.hint().isBlank();
+        boolean alreadyRevealed = stage != null
+                && stageKeys(session.getRevealedHintsJson()).contains(stage.stableKey());
+        int retryAfterSeconds = 0;
+        if (!alreadyRevealed && cooldown > 0 && session.getLastHintAt() != null) {
+            long remainingMillis = Duration.between(Instant.now(), session.getLastHintAt().plusSeconds(cooldown)).toMillis();
+            retryAfterSeconds = remainingMillis <= 0 ? 0 : (int) Math.ceil(remainingMillis / 1_000.0);
+        }
+
+        boolean allowed = hasHint && (alreadyRevealed
+                || ((unlimited || remaining > 0) && retryAfterSeconds == 0));
+        String statusText;
+        if (!hasHint) statusText = "이 문제에는 등록된 힌트가 없습니다.";
+        else if (alreadyRevealed) statusText = unlimited
+                ? "이미 확인한 힌트입니다. 다시 열어도 사용 횟수에 포함되지 않습니다."
+                : "이미 확인한 힌트입니다. 남은 힌트 " + remaining + "회";
+        else if (!unlimited && remaining == 0) statusText = "사용 가능한 힌트를 모두 썼습니다.";
+        else if (retryAfterSeconds > 0) statusText = retryAfterSeconds + "초 후 다음 힌트를 볼 수 있습니다.";
+        else if (unlimited) statusText = cooldown > 0
+                ? "힌트 횟수는 무제한이며 사용 후 " + cooldown + "초를 기다립니다."
+                : "힌트를 횟수 제한 없이 사용할 수 있습니다.";
+        else statusText = "남은 힌트 " + remaining + "회";
+
+        return new HintAvailability(allowed, hasHint, alreadyRevealed, unlimited,
+                remaining, cooldown, retryAfterSeconds, statusText);
     }
 
     @Transactional
@@ -259,8 +307,8 @@ public class PlayService {
             session.setActiveStageKey(null);
             return new SolveResult(true, solved.size() >= snapshot.stages().size(), null);
         }
-        Set<String> inventory = inventoryKeys(session);
-        if (stage.requiredItem() != null && !inventory.contains(stage.requiredItem())) {
+        LinkedHashSet<String> inventory = inventoryKeys(session);
+        if (!inventory.containsAll(requiredItemKeys(stage))) {
             session.recordFailedAttempt();
             attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, false));
             return new SolveResult(false, false, "먼저 필요한 단서를 찾아야 합니다.");
@@ -272,10 +320,7 @@ public class PlayService {
             session.recordFailedAttempt();
             return new SolveResult(false, false, "자물쇠가 열리지 않았습니다. 단서를 다시 살펴보세요.");
         }
-        if (stage.rewardItem() != null) {
-            inventory.add(stage.rewardItem());
-            session.setInventoryJson(writeInventory(inventory));
-        }
+        applyItemExchange(session, stage, inventory);
         session.recordSuccessfulAttempt();
         solved.add(stage.stableKey());
         session.setSolvedStagesJson(writeKeys(solved));
@@ -319,10 +364,19 @@ public class PlayService {
                 .filter(candidate -> candidate.stableKey().equals(itemStableKey)).findFirst().orElse(null);
         if (item == null) return new ClueScanResult(false, false, false, "현재 게임의 단서가 아닙니다.", null);
         if (!item.qrEnabled()) return new ClueScanResult(true, false, false, "QR로 공개된 단서가 아닙니다.", null);
+        LinkedHashSet<String> inventory = inventoryKeys(session);
+        if (item.alternateRequiredItem() != null
+                && inventory.contains(item.alternateRequiredItem())
+                && item.alternateScanText() != null
+                && !item.alternateScanText().isBlank()) {
+            session.touch();
+            return new ClueScanResult(true, true, true, item.alternateScanText(), item);
+        }
         boolean isNew = scannedClueRepository.findByPlaySessionIdAndItemStableKey(session.getId(), itemStableKey).isEmpty();
         if (isNew) scannedClueRepository.save(new ScannedClue(session, itemStableKey));
-        LinkedHashSet<String> inventory = inventoryKeys(session);
-        if (inventory.add(itemStableKey)) session.setInventoryJson(writeInventory(inventory));
+        if (!consumedItemKeys(session).contains(itemStableKey) && inventory.add(itemStableKey)) {
+            session.setInventoryJson(writeInventory(inventory));
+        }
         session.touch();
         return new ClueScanResult(true, true, true,
                 isNew ? "새 단서를 발견했습니다." : "이미 발견한 단서입니다.", item);
@@ -340,6 +394,10 @@ public class PlayService {
 
     private LinkedHashSet<String> inventoryKeys(PlaySession session) {
         return readKeys(session.getInventoryJson());
+    }
+
+    private LinkedHashSet<String> consumedItemKeys(PlaySession session) {
+        return readKeys(session.getConsumedItemsJson());
     }
 
     private LinkedHashSet<String> stageKeys(String json) {
@@ -363,6 +421,11 @@ public class PlayService {
     }
 
     private void initializeExplorationSession(PlaySession session, ReleaseSnapshot snapshot) {
+        LinkedHashSet<String> initialInventory = new LinkedHashSet<>();
+        snapshot.items().stream().filter(ReleaseSnapshot.ItemSnapshot::initiallyOwned)
+                .map(ReleaseSnapshot.ItemSnapshot::stableKey).forEach(initialInventory::add);
+        session.setInventoryJson(writeInventory(initialInventory));
+        session.setConsumedItemsJson("[]");
         if (flowMode(snapshot) != GameFlowMode.QR_EXPLORATION) return;
         LinkedHashSet<String> discovered = new LinkedHashSet<>();
         snapshot.stages().stream()
@@ -401,6 +464,36 @@ public class PlayService {
         return snapshot.items().stream().filter(item -> keys.contains(item.stableKey())).toList();
     }
 
+    public List<RequiredItemView> requiredItemViews(PlayView view) {
+        if (view == null || view.stage() == null) return List.of();
+        Set<String> inventory = view.inventory().stream()
+                .map(ReleaseSnapshot.ItemSnapshot::stableKey)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, ReleaseSnapshot.ItemSnapshot> items = new LinkedHashMap<>();
+        view.game().items().forEach(item -> items.put(item.stableKey(), item));
+        return requiredItemKeys(view.stage()).stream()
+                .map(key -> new RequiredItemView(items.get(key), inventory.contains(key)))
+                .filter(required -> required.item() != null)
+                .toList();
+    }
+
+    private List<String> requiredItemKeys(ReleaseSnapshot.StageSnapshot stage) {
+        return stage == null ? List.of() : stage.getRequiredItems();
+    }
+
+    private void applyItemExchange(PlaySession session, ReleaseSnapshot.StageSnapshot stage,
+                                   LinkedHashSet<String> inventory) {
+        if (stage.consumeRequiredItems()) {
+            List<String> required = requiredItemKeys(stage);
+            inventory.removeAll(required);
+            LinkedHashSet<String> consumed = consumedItemKeys(session);
+            consumed.addAll(required);
+            session.setConsumedItemsJson(writeKeys(consumed));
+        }
+        if (stage.rewardItem() != null) inventory.add(stage.rewardItem());
+        session.setInventoryJson(writeInventory(inventory));
+    }
+
     public record PlayView(ReleaseSnapshot game, PlaySession session,
                            ReleaseSnapshot.StageSnapshot stage,
                            List<ReleaseSnapshot.ItemSnapshot> inventory,
@@ -417,6 +510,11 @@ public class PlayService {
         public List<ReleaseSnapshot.StageSnapshot> getDiscoveredStages() { return discoveredStages; }
         public Set<String> getSolvedStageKeys() { return solvedStageKeys; }
         public int getSolvedStageCount() { return solvedStageKeys.size(); }
+    }
+
+    public record RequiredItemView(ReleaseSnapshot.ItemSnapshot item, boolean owned) {
+        public ReleaseSnapshot.ItemSnapshot getItem() { return item; }
+        public boolean isOwned() { return owned; }
     }
 
     public record ScannedClueView(ReleaseSnapshot.ItemSnapshot item, java.time.Instant scannedAt) {
@@ -449,6 +547,27 @@ public class PlayService {
     public record SolveResult(boolean success, boolean completed, String message) {
         public boolean isSuccess() { return success; }
         public boolean isCompleted() { return completed; }
+        public String getMessage() { return message; }
+    }
+
+    public record HintAvailability(boolean allowed, boolean hasHint, boolean alreadyRevealed,
+                                   boolean unlimited, int remainingHints, int cooldownSeconds,
+                                   int retryAfterSeconds, String statusText) {
+        public boolean isAllowed() { return allowed; }
+        public boolean isHasHint() { return hasHint; }
+        public boolean isAlreadyRevealed() { return alreadyRevealed; }
+        public boolean isUnlimited() { return unlimited; }
+        public int getRemainingHints() { return remainingHints; }
+        public int getCooldownSeconds() { return cooldownSeconds; }
+        public int getRetryAfterSeconds() { return retryAfterSeconds; }
+        public String getStatusText() { return statusText; }
+    }
+
+    public record HintRevealResult(boolean revealed, boolean newlyConsumed,
+                                   String hint, String message) {
+        public boolean isRevealed() { return revealed; }
+        public boolean isNewlyConsumed() { return newlyConsumed; }
+        public String getHint() { return hint; }
         public String getMessage() { return message; }
     }
 

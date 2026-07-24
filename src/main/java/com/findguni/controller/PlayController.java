@@ -94,7 +94,12 @@ public class PlayController {
         model.addAttribute("stageCount", count);
         model.addAttribute("progressPercent", count == 0 ? 100 : Math.round(index * 100.0 / count));
         model.addAttribute("hasActiveSession", true);
-        if (!model.containsAttribute("hintRevealed")) model.addAttribute("hintRevealed", false);
+        PlayService.HintAvailability hintAvailability = plays.hintAvailability(view);
+        model.addAttribute("hintAvailability", hintAvailability);
+        if (!model.containsAttribute("hintRevealed")) {
+            model.addAttribute("hintRevealed", hintAvailability.alreadyRevealed());
+            if (hintAvailability.alreadyRevealed()) model.addAttribute("revealedHint", view.stage().hint());
+        }
         return "player/stage";
     }
 
@@ -126,9 +131,13 @@ public class PlayController {
     public String hint(@PathVariable String slug, HttpServletRequest request, RedirectAttributes redirect) {
         String rawToken = devices.token(request).orElse(null);
         if (rawToken == null) return "redirect:/play/" + slug;
-        String hint = plays.revealHint(slug, devices.hash(rawToken));
-        redirect.addFlashAttribute("hintRevealed", true);
-        redirect.addFlashAttribute("revealedHint", hint);
+        PlayService.HintRevealResult result = plays.revealHint(slug, devices.hash(rawToken));
+        if (result.revealed()) {
+            redirect.addFlashAttribute("hintRevealed", true);
+            redirect.addFlashAttribute("revealedHint", result.hint());
+        } else {
+            redirect.addFlashAttribute("error", result.message());
+        }
         return "redirect:/play/" + slug + "/stage";
     }
 
@@ -214,6 +223,7 @@ public class PlayController {
     private void addPlayTools(Model model, PlayService.PlayView view) {
         model.addAttribute("game", view.game());
         model.addAttribute("inventory", view.inventory());
+        model.addAttribute("requiredItems", plays.requiredItemViews(view));
         model.addAttribute("attemptCount", view.session().getAttemptCount());
         model.addAttribute("notes", view.notes());
         model.addAttribute("scannedClues", view.scannedClues());

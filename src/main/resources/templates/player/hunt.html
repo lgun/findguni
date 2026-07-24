@@ -9,6 +9,7 @@
     <title th:text="|QR 탐색 · ${game.title}|">QR 탐색 · Findguni</title>
     <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
     <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+    <script defer th:src="@{/js/player.js}" src="/js/player.js"></script>
     <script defer th:src="@{/js/scanner.js}" src="/js/scanner.js"></script>
 </head>
 <body class="player-body" th:attr="data-theme=${game.theme != null ? game.theme.name() : 'MIDNIGHT'}" th:style="|--accent:${game.accentColor};--accent-secondary:${game.secondaryColor};--game-bg:${game.backgroundColor};|">
@@ -76,7 +77,7 @@
         </details>
         <details class="card hunt-tool-card">
             <summary><span>🎒</span><strong>아이템</strong><small th:text="|${inventory != null ? inventory.size() : 0}개|">0개</small></summary>
-            <div class="hunt-tool-card__body"><p class="muted" th:if="${inventory == null or #lists.isEmpty(inventory)}">아직 획득한 아이템이 없습니다.</p><ul class="tool-card-list" th:unless="${inventory == null or #lists.isEmpty(inventory)}"><li class="tool-item-card" th:each="item : ${inventory}"><div class="tool-item-card__media"><span th:text="${item.emoji}">◇</span></div><div><strong th:text="${item.name}">아이템</strong><p th:text="${item.description}">설명</p></div></li></ul></div>
+            <div class="hunt-tool-card__body"><p class="muted" th:if="${inventory == null or #lists.isEmpty(inventory)}">아직 획득한 아이템이 없습니다.</p><ul class="tool-card-list" th:unless="${inventory == null or #lists.isEmpty(inventory)}"><li class="tool-item-card" th:each="item : ${inventory}"><div class="tool-item-card__media"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="|${item.name} 이미지|"><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji}">◇</span></div><div><strong th:text="${item.name}">아이템</strong><p th:text="${item.clueText != null and !#strings.isEmpty(item.clueText) ? item.clueText : item.description}">설명</p><a class="item-image-link" th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:href="${item.imageUrl}" target="_blank" rel="noopener">이미지 크게 보기</a><div class="copyable-item" th:if="${item.copyableText != null and !#strings.isEmpty(item.copyableText)}"><code th:text="${item.copyableText}">copy me</code><button class="btn btn--secondary btn--small" type="button" data-copy-text th:attr="data-copy-value=${item.copyableText}">복사하기</button><span data-copy-status role="status" aria-live="polite"></span></div></div></li></ul></div>
         </details>
         <details class="card hunt-tool-card" th:if="${game.allowNotebook}">
             <summary><span>📝</span><strong>메모장</strong><small>내 기기</small></summary>

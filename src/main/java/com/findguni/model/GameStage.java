@@ -2,6 +2,11 @@ package com.findguni.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +42,7 @@ public class GameStage {
     private String hint = "";
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "puzzle_type", nullable = false, length = 30)
     private PuzzleType puzzleType = PuzzleType.STORY;
 
@@ -54,6 +60,14 @@ public class GameStage {
     @Column(name = "required_item", length = 36)
     private String requiredItem;
 
+    @Lob
+    @Column(name = "required_items", columnDefinition = "LONGTEXT")
+    private String requiredItems;
+
+    @Column(name = "consume_required_items", nullable = false)
+    @ColumnDefault("false")
+    private boolean consumeRequiredItems;
+
     @Column(name = "reward_item", length = 36)
     private String rewardItem;
 
@@ -62,6 +76,7 @@ public class GameStage {
     private boolean qrEnabled = true;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "entry_mode", nullable = false, length = 16)
     @ColumnDefault("'QR'")
     private StageEntryMode entryMode = StageEntryMode.QR;
@@ -70,6 +85,7 @@ public class GameStage {
     private String nextStageKey;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "story_effect", nullable = false, length = 20)
     @ColumnDefault("'FADE'")
     private StoryEffect storyEffect = StoryEffect.FADE;
@@ -138,7 +154,32 @@ public class GameStage {
     public int getLockLength() { return lockLength; }
     public void setLockLength(int lockLength) { this.lockLength = lockLength; }
     public String getRequiredItem() { return requiredItem; }
-    public void setRequiredItem(String requiredItem) { this.requiredItem = requiredItem; }
+    public void setRequiredItem(String requiredItem) {
+        this.requiredItem = requiredItem;
+        this.requiredItems = requiredItem;
+    }
+    public List<String> getRequiredItems() {
+        String source = requiredItems == null || requiredItems.isBlank() ? requiredItem : requiredItems;
+        if (source == null || source.isBlank()) return List.of();
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        for (String value : source.replace("\r", "").split("[\\n,]")) {
+            if (!value.isBlank()) values.add(value.trim());
+        }
+        return List.copyOf(values);
+    }
+    public void setRequiredItems(Collection<String> values) {
+        LinkedHashSet<String> cleaned = new LinkedHashSet<>();
+        if (values != null) values.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .forEach(cleaned::add);
+        this.requiredItems = cleaned.isEmpty() ? null : String.join("\n", cleaned);
+        this.requiredItem = cleaned.stream().findFirst().orElse(null);
+    }
+    public boolean isConsumeRequiredItems() { return consumeRequiredItems; }
+    public void setConsumeRequiredItems(boolean consumeRequiredItems) {
+        this.consumeRequiredItems = consumeRequiredItems;
+    }
     public String getRewardItem() { return rewardItem; }
     public void setRewardItem(String rewardItem) { this.rewardItem = rewardItem; }
     public boolean isQrEnabled() { return entryMode == null ? qrEnabled : entryMode == StageEntryMode.QR; }

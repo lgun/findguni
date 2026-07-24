@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${game.title} QR 인쇄 키트 · Findguni Maker|">QR 인쇄 키트 · Findguni Maker</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+    <script defer th:src="@{/js/app.js}" src="/js/app.js"></script>
+</head>
+<body class="qr-kit-body">
+<div th:replace="~{fragments/nav :: makerNav('builder')}"></div>
+<main class="page-main qr-kit-main" id="main-content">
+    <div class="container stack stack--lg">
+        <header class="qr-kit-toolbar no-print">
+            <div>
+                <a class="btn btn--quiet btn--small" th:href="@{/maker/games/{id}/edit(id=${game.id})}">← 게임 편집</a>
+                <p class="eyebrow" style="margin-top:1rem">QR print kit</p>
+                <h1 class="page-title">QR 일괄 다운로드·인쇄</h1>
+                <p class="lede" th:text="|${game.title}의 시작·문제·단서 QR을 A4 절취 카드로 모았습니다.|">게임 QR을 A4 절취 카드로 모았습니다.</p>
+            </div>
+            <div class="qr-kit-actions">
+                <a class="btn" th:href="@{/maker/games/{id}/qr-kit/print.pdf(id=${game.id})}" download>PDF 한 문서 받기</a>
+                <a class="btn btn--secondary" th:href="@{/maker/games/{id}/qr-kit/qr-images.zip(id=${game.id})}" download>PNG 전체 ZIP</a>
+                <button class="btn btn--secondary" type="button" data-print-page>바로 인쇄</button>
+            </div>
+        </header>
+
+        <section class="metric-grid qr-kit-metrics no-print" aria-label="QR 인쇄 키트 구성">
+            <div class="metric"><strong class="metric__value" th:text="${kit.totalCount}">0</strong><span class="metric__label">전체 QR</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${kit.stageCount}">0</strong><span class="metric__label">문제 QR</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${kit.itemCount}">0</strong><span class="metric__label">단서 QR</span></div>
+            <div class="metric"><strong class="metric__value" th:text="${kit.pageCount}">0</strong><span class="metric__label">A4 페이지</span></div>
+        </section>
+
+        <aside class="alert alert--info no-print" role="note">
+            <span aria-hidden="true">✂</span>
+            <span>PDF는 A4 한 장당 최대 6개입니다. 100% 실제 크기로 인쇄하고 점선을 따라 오린 뒤, 아래 운영자 메모에 설치 위치와 스캔 확인을 표시하세요.</span>
+        </aside>
+
+        <div class="qr-kit-pages" aria-label="QR 절취 카드 미리보기">
+            <section class="qr-kit-page" th:each="page, pageStat : ${qrPages}" th:attr="aria-label=|QR 인쇄 ${pageStat.count}페이지|">
+                <span class="qr-kit-page__number no-print" th:text="|A4 ${pageStat.count} / ${kit.pageCount}|">A4 1 / 1</span>
+                <article class="qr-cut-card" th:each="card : ${page}">
+                    <header class="qr-cut-card__header">
+                        <strong th:text="|QR ${card.label}|">QR 01</strong>
+                        <span th:text="${card.type}">문제</span>
+                    </header>
+                    <img class="qr-cut-card__image" th:src="${card.imageDataUrl}" th:alt="|${card.title} QR 코드|">
+                    <h2 th:text="${card.title}">QR 제목</h2>
+                    <footer class="qr-cut-card__operator">
+                        <span>설치 위치 <i aria-hidden="true"></i></span>
+                        <span>스캔 확인 <b aria-label="확인 칸">□</b><small>운영자 메모</small></span>
+                    </footer>
+                </article>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -2,6 +2,8 @@ package com.findguni.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
@@ -62,7 +64,20 @@ public class EscapeGame {
     @ColumnDefault("true")
     private boolean allowQrScanner = true;
 
+    @Column(name = "unlimited_hints", nullable = false)
+    @ColumnDefault("true")
+    private boolean unlimitedHints = true;
+
+    @Column(name = "hint_limit", nullable = false)
+    @ColumnDefault("3")
+    private int hintLimit = 3;
+
+    @Column(name = "hint_cooldown_seconds", nullable = false)
+    @ColumnDefault("0")
+    private int hintCooldownSeconds;
+
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "flow_mode", nullable = false, length = 24)
     @ColumnDefault("'QR_EXPLORATION'")
     private GameFlowMode flowMode = GameFlowMode.QR_EXPLORATION;
@@ -102,10 +117,12 @@ public class EscapeGame {
     private boolean enableVignette = true;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 30)
     private GameTheme theme = GameTheme.MIDNIGHT;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private Difficulty difficulty = Difficulty.NORMAL;
 
@@ -113,10 +130,12 @@ public class EscapeGame {
     private int estimatedMinutes = 30;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private GameVisibility visibility = GameVisibility.LINK_ONLY;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private GameStatus status = GameStatus.DRAFT;
 
@@ -179,6 +198,12 @@ public class EscapeGame {
     public void setAllowCluebook(boolean allowCluebook) { this.allowCluebook = allowCluebook; }
     public boolean isAllowQrScanner() { return allowQrScanner; }
     public void setAllowQrScanner(boolean allowQrScanner) { this.allowQrScanner = allowQrScanner; }
+    public boolean isUnlimitedHints() { return unlimitedHints; }
+    public void setUnlimitedHints(boolean unlimitedHints) { this.unlimitedHints = unlimitedHints; }
+    public int getHintLimit() { return hintLimit; }
+    public void setHintLimit(int hintLimit) { this.hintLimit = hintLimit; }
+    public int getHintCooldownSeconds() { return hintCooldownSeconds; }
+    public void setHintCooldownSeconds(int hintCooldownSeconds) { this.hintCooldownSeconds = hintCooldownSeconds; }
     public GameFlowMode getFlowMode() { return flowMode; }
     public void setFlowMode(GameFlowMode flowMode) { this.flowMode = flowMode; }
     public String getBgmUrl() { return bgmUrl; }

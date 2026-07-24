@@ -3,8 +3,11 @@ package com.findguni.controller;
 import com.findguni.model.Difficulty;
 import com.findguni.model.EscapeGame;
 import com.findguni.model.GameItem;
+import com.findguni.model.GameFlowMode;
+import com.findguni.model.GameStage;
 import com.findguni.model.GameTheme;
 import com.findguni.model.ItemType;
+import com.findguni.model.StageEntryMode;
 import com.findguni.model.UserAccount;
 import com.findguni.repository.ScannedClueRepository;
 import com.findguni.service.AccountService;
@@ -12,8 +15,16 @@ import com.findguni.service.AnonymousDeviceService;
 import com.findguni.service.GameAuthoringService;
 import com.findguni.service.PublishingService;
 import com.findguni.service.QRCodeService;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,7 +47,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -111,9 +126,18 @@ class MakerAndPlayerToolsWebIntegrationTest {
                 .andExpect(content().string(containsString("name=\"allowNotebook\"")))
                 .andExpect(content().string(containsString("name=\"allowCluebook\"")))
                 .andExpect(content().string(containsString("name=\"allowQrScanner\"")))
+                .andExpect(content().string(containsString("name=\"unlimitedHints\"")))
+                .andExpect(content().string(containsString("name=\"hintLimit\"")))
+                .andExpect(content().string(containsString("name=\"hintCooldownSeconds\"")))
                 .andExpect(content().string(containsString("name=\"itemType\"")))
                 .andExpect(content().string(containsString("name=\"clueText\"")))
+                .andExpect(content().string(containsString("name=\"initiallyOwned\"")))
+                .andExpect(content().string(containsString("name=\"copyableText\"")))
+                .andExpect(content().string(containsString("name=\"alternateRequiredItem\"")))
+                .andExpect(content().string(containsString("name=\"alternateScanText\"")))
                 .andExpect(content().string(containsString("name=\"qrEnabled\"")))
+                .andExpect(content().string(containsString("name=\"requiredItemIds\"")))
+                .andExpect(content().string(containsString("name=\"consumeRequiredItems\"")))
                 .andExpect(content().string(containsString("name=\"photo\"")));
 
         mvc.perform(get("/maker/games/{gameId}/items/{itemId}/qr", game.getId(), item.getId())
@@ -139,6 +163,92 @@ class MakerAndPlayerToolsWebIntegrationTest {
                         .param("qrEnabled", "true"))
                 .andExpect(status().isNotFound());
         assertThat(authoring.ownedItem(game.getId(), item.getId(), owner).getImageUrl()).isNull();
+    }
+
+    @Test
+    void makerGetsAnOwnedA4QrKitAsOnePdfOrOriginalPngZip() throws Exception {
+        UserAccount owner = signup("qr-kit-owner");
+        UserAccount intruder = signup("qr-kit-intruder");
+        EscapeGame game = createGame(owner, "qr-kit-game");
+        authoring.updateFlowMode(game.getId(), owner, GameFlowMode.QR_EXPLORATION);
+        GameStage stage = authoring.stages(game.getId(), owner).get(0);
+        stage.setEntryMode(StageEntryMode.QR);
+        authoring.addItem(game.getId(), owner, ItemType.EVIDENCE, "숨은 단서",
+                "QR kit clue", "스캔해서 찾는 단서", "🔎", true, null);
+        int expectedQrCount = 1
+                + (int) authoring.stages(game.getId(), owner).stream().filter(GameStage::isQrEnabled).count()
+                + (int) authoring.items(game.getId(), owner).stream().filter(GameItem::isQrEnabled).count();
+        MockHttpSession ownerBrowser = login(owner.getEmail(), "password-123");
+        MockHttpSession intruderBrowser = login(intruder.getEmail(), "password-123");
+
+        mvc.perform(get("/maker/games/{id}/qr-kit", game.getId()).session(ownerBrowser))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("game", "kit", "qrCards", "qrPages"))
+                .andExpect(content().string(containsString("QR 일괄 다운로드·인쇄")))
+                .andExpect(content().string(containsString("PDF 한 문서 받기")))
+                .andExpect(content().string(containsString("PNG 전체 ZIP")))
+                .andExpect(content().string(containsString("숨은 단서")));
+
+        byte[] pdf = mvc.perform(get("/maker/games/{id}/qr-kit/print.pdf", game.getId())
+                        .session(ownerBrowser))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andReturn().getResponse().getContentAsByteArray();
+        assertThat(new String(pdf, 0, 5, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            assertThat(document.getNumberOfPages()).isEqualTo(1);
+            BufferedImage printedPage = new PDFRenderer(document).renderImageWithDPI(0, 150);
+            Set<String> printedPayloads = new HashSet<>();
+            int sourcePageWidth = 1240;
+            int sourcePageHeight = 1754;
+            int sourceMargin = 48;
+            int sourceGap = 20;
+            int sourceCardWidth = (sourcePageWidth - sourceMargin * 2 - sourceGap) / 2;
+            int sourceCardHeight = (sourcePageHeight - sourceMargin * 2 - sourceGap * 2) / 3;
+            for (int index = 0; index < expectedQrCount; index++) {
+                int sourceCardX = sourceMargin + index % 2 * (sourceCardWidth + sourceGap);
+                int sourceCardY = sourceMargin + index / 2 * (sourceCardHeight + sourceGap);
+                int cropX = (int) Math.round((sourceCardX + (sourceCardWidth - 320) / 2.0)
+                        * printedPage.getWidth() / sourcePageWidth);
+                int cropY = (int) Math.round((sourceCardY + 55.0)
+                        * printedPage.getHeight() / sourcePageHeight);
+                int cropWidth = (int) Math.round(320.0 * printedPage.getWidth() / sourcePageWidth);
+                int cropHeight = (int) Math.round(320.0 * printedPage.getHeight() / sourcePageHeight);
+                BufferedImage printedQr = printedPage.getSubimage(cropX, cropY, cropWidth, cropHeight);
+                BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(
+                        new BufferedImageLuminanceSource(printedQr)));
+                printedPayloads.add(new MultiFormatReader().decode(bitmap,
+                        java.util.Map.of(DecodeHintType.TRY_HARDER, true)).getText());
+            }
+            assertThat(printedPayloads).hasSize(expectedQrCount).contains(qrCodes.playUrl(game));
+        }
+
+        byte[] zipBytes = mvc.perform(get("/maker/games/{id}/qr-kit/qr-images.zip", game.getId())
+                        .session(ownerBrowser))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/zip"))
+                .andReturn().getResponse().getContentAsByteArray();
+        Set<String> entries = new HashSet<>();
+        int decodedQrCount = 0;
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(zipBytes),
+                java.nio.charset.StandardCharsets.UTF_8)) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                entries.add(entry.getName());
+                if (!entry.getName().endsWith(".png")) continue;
+                ByteArrayOutputStream imageBytes = new ByteArrayOutputStream();
+                zip.transferTo(imageBytes);
+                MockMultipartFile qrImage = new MockMultipartFile(
+                        "frame", entry.getName(), "image/png", imageBytes.toByteArray());
+                assertThat(qrCodes.decode(qrImage)).isPresent();
+                decodedQrCount++;
+            }
+        }
+        assertThat(decodedQrCount).isEqualTo(expectedQrCount);
+        assertThat(entries).contains("QR-목록.txt");
+
+        mvc.perform(get("/maker/games/{id}/qr-kit", game.getId()).session(intruderBrowser))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -196,6 +306,9 @@ class MakerAndPlayerToolsWebIntegrationTest {
                         .param("allowNotebook", "false", "true")
                         .param("allowCluebook", "false")
                         .param("allowQrScanner", "false")
+                        .param("unlimitedHints", "false")
+                        .param("hintLimit", "2")
+                        .param("hintCooldownSeconds", "45")
                         .param("theme", "MIDNIGHT")
                         .param("difficulty", "NORMAL")
                         .param("estimatedMinutes", "30")
@@ -207,6 +320,9 @@ class MakerAndPlayerToolsWebIntegrationTest {
         assertThat(updated.isAllowNotebook()).isTrue();
         assertThat(updated.isAllowCluebook()).isFalse();
         assertThat(updated.isAllowQrScanner()).isFalse();
+        assertThat(updated.isUnlimitedHints()).isFalse();
+        assertThat(updated.getHintLimit()).isEqualTo(2);
+        assertThat(updated.getHintCooldownSeconds()).isEqualTo(45);
     }
 
     @Test

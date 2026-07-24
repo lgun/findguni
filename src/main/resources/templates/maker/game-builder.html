@@ -204,6 +204,23 @@
                         <label class="tool-toggle"><span><strong>QR 스캐너</strong><small>게임을 나가지 않고 현장 QR을 카메라로 스캔</small></span><input type="checkbox" name="allowQrScanner" value="true" th:checked="${game.allowQrScanner}" data-toggle-checkbox data-tool-preview="preview-tool-scanner preview-stage-tool-scanner"><input type="hidden" name="allowQrScanner" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
                     </section>
 
+                    <section class="tool-settings" aria-labelledby="hint-policy-title">
+                        <div class="builder-section__head"><div><h2 id="hint-policy-title">힌트 정책</h2><p>한 플레이 세션에서 힌트를 얼마나 자주 사용할 수 있는지 정하세요.</p></div></div>
+                        <label class="tool-toggle"><span><strong>힌트 횟수 무제한</strong><small>끄면 아래의 전체 사용 가능 횟수가 적용됩니다.</small></span><input type="checkbox" name="unlimitedHints" value="true" th:checked="${game.unlimitedHints}" data-toggle-checkbox><input type="hidden" name="unlimitedHints" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
+                        <div class="form-grid form-grid--2">
+                            <div class="field">
+                                <label class="field__label" for="hint-limit">전체 힌트 횟수</label>
+                                <input class="input" id="hint-limit" type="number" name="hintLimit" th:value="${game.hintLimit}" min="1" max="100" inputmode="numeric" required>
+                                <span class="field__hint">무제한을 끈 경우 세션 전체에 적용됩니다. 이미 본 힌트는 다시 열어도 차감되지 않습니다.</span>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="hint-cooldown">다음 힌트 대기시간(초)</label>
+                                <input class="input" id="hint-cooldown" type="number" name="hintCooldownSeconds" th:value="${game.hintCooldownSeconds}" min="0" max="3600" inputmode="numeric" required>
+                                <span class="field__hint">0이면 바로 다음 힌트를 볼 수 있습니다. 무제한 모드에도 대기시간을 적용할 수 있습니다.</span>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="sound-settings" aria-labelledby="sound-settings-title">
                         <div class="builder-section__head">
                             <div><h2 id="sound-settings-title">사운드·연출</h2><p>게임 전체에 흐르는 배경 음악과 이야기 표시 속도를 설정하세요.</p></div>
@@ -410,11 +427,17 @@
                                 </div>
                                 <div class="form-grid form-grid--2">
                                     <div class="field">
-                                        <label class="field__label" th:for="|stage-required-${stage.id}|">필요 아이템</label>
-                                        <select class="select" th:id="|stage-required-${stage.id}|" name="requiredItemId">
-                                            <option value="">없음</option>
-                                            <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}" th:selected="${stage.requiredItem != null and stage.requiredItem == item.stableKey}">아이템</option>
+                                        <label class="field__label" th:for="|stage-required-${stage.id}|">필요 아이템 · 조합 재료</label>
+                                        <input type="hidden" name="requiredItemId" value="">
+                                        <select class="select" th:id="|stage-required-${stage.id}|" name="requiredItemIds" multiple size="5">
+                                            <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}" th:selected="${stage.requiredItems.contains(item.stableKey)}">아이템</option>
                                         </select>
+                                        <span class="field__hint">Ctrl(Windows) 또는 Cmd(Mac)를 누르고 여러 재료를 고를 수 있습니다.</span>
+                                        <label class="check-row">
+                                            <input type="checkbox" name="consumeRequiredItems" value="true" th:checked="${stage.consumeRequiredItems}">
+                                            <input type="hidden" name="consumeRequiredItems" value="false">
+                                            <span><strong>해결할 때 재료 사용 처리</strong><small>조합소나 NPC에게 건네는 아이템은 가방에서 사라집니다.</small></span>
+                                        </label>
                                     </div>
                                     <div class="field">
                                         <label class="field__label" th:for="|stage-reward-${stage.id}|">획득 아이템</label>
@@ -471,7 +494,7 @@
                             <summary class="item-editor__summary">
                                 <span class="item-thumb item-thumb--small"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" alt=""><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></span>
                                 <span><strong th:text="${item.name}">아이템 이름</strong><small th:text="${item.itemType != null ? item.itemType.displayName : '커스텀'}">아이템 유형</small></span>
-                                <span class="cluster"><span class="badge badge--accent" th:if="${item.qrEnabled}">QR</span><span aria-hidden="true">⌄</span></span>
+                                <span class="cluster"><span class="badge badge--success" th:if="${item.initiallyOwned}">시작</span><span class="badge badge--accent" th:if="${item.qrEnabled}">QR</span><span aria-hidden="true">⌄</span></span>
                             </summary>
                             <form class="item-editor__form form-grid" th:action="@{/maker/games/{gameId}/items/{itemId}(gameId=${game.id},itemId=${item.id})}" method="post" enctype="multipart/form-data">
                                 <div class="item-media-editor">
@@ -485,6 +508,27 @@
                                 <div class="field"><label class="field__label" th:for="|item-icon-${item.id}|">아이콘</label><input class="input" th:id="|item-icon-${item.id}|" name="icon" th:value="${item.emoji}" maxlength="16" placeholder="🔑"><div th:replace="~{fragments/controls :: emojiPicker(targetId=${'item-icon-' + item.id})}"></div><span class="field__hint">32개 프리셋 또는 원하는 이모지를 직접 입력하세요.</span></div>
                                 <div class="field"><label class="field__label" th:for="|item-description-${item.id}|">가방 설명</label><textarea class="textarea" th:id="|item-description-${item.id}|" name="description" th:text="${item.description}" maxlength="500" placeholder="아이템을 획득했을 때 보이는 설명"></textarea></div>
                                 <div class="field"><label class="field__label" th:for="|item-clue-${item.id}|">단서장 내용</label><textarea class="textarea" th:id="|item-clue-${item.id}|" name="clueText" th:text="${item.clueText}" maxlength="2000" placeholder="QR로 발견한 뒤 단서장에서 다시 읽을 상세 단서"></textarea></div>
+                                <div class="field"><label class="field__label" th:for="|item-copy-${item.id}|">복사할 텍스트</label><input class="input" th:id="|item-copy-${item.id}|" name="copyableText" th:value="${item.copyableText}" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예: 긴 도어락 비밀번호"><span class="field__hint">값이 있으면 플레이어 가방에 복사 버튼이 표시됩니다.</span></div>
+                                <div class="card__body form-grid" style="background:var(--surface-2);border-radius:var(--radius-md)">
+                                    <h3 style="margin:0">조건부 재스캔 장면</h3>
+                                    <p class="field__hint" style="margin:0">플레이어가 선택한 아이템을 가진 뒤 이 QR을 다시 스캔하면, 원래 단서 대신 아래 장면을 보여 줍니다. 아이템을 빼앗거나 다시 지급하지 않습니다.</p>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|item-alternate-required-${item.id}|">조건 아이템</label>
+                                        <select class="select" th:id="|item-alternate-required-${item.id}|" name="alternateRequiredItem">
+                                            <option value="">사용 안 함</option>
+                                            <option th:each="conditionItem : ${items}"
+                                                    th:if="${conditionItem.id != item.id}"
+                                                    th:value="${conditionItem.stableKey}"
+                                                    th:text="${conditionItem.name}"
+                                                    th:selected="${conditionItem.stableKey == item.alternateRequiredItem}">조건 아이템</option>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label class="field__label" th:for="|item-alternate-text-${item.id}|">조건 충족 후 장면</label>
+                                        <textarea class="textarea" th:id="|item-alternate-text-${item.id}|" name="alternateScanText" th:text="${item.alternateScanText}" maxlength="4000" placeholder="예: 경비원이 빈 칼집을 보고 조용히 보내 주었다."></textarea>
+                                    </div>
+                                </div>
+                                <label class="tool-toggle"><span><strong>시작 아이템</strong><small>새 플레이 세션의 가방에 처음부터 넣습니다.</small></span><input type="checkbox" name="initiallyOwned" value="true" th:checked="${item.initiallyOwned}"><span class="toggle-ui" aria-hidden="true"></span></label>
                                 <label class="tool-toggle"><span><strong>QR 단서 사용</strong><small>이 아이템을 발견하는 전용 QR 코드를 발급합니다.</small></span><input type="checkbox" name="qrEnabled" value="true" th:checked="${item.qrEnabled}"><span class="toggle-ui" aria-hidden="true"></span></label>
                                 <div class="qr-item-panel" th:if="${item.qrEnabled}">
                                     <img th:src="@{/maker/games/{gameId}/items/{itemId}/qr(gameId=${game.id},itemId=${item.id})}" th:alt="|${item.name} 단서 QR 코드|">
@@ -503,7 +547,20 @@
                         <div class="field"><label class="field__label" for="new-item-icon">아이콘</label><input class="input" id="new-item-icon" name="icon" maxlength="16" placeholder="🔑"><div th:replace="~{fragments/controls :: emojiPicker('new-item-icon')}"></div></div>
                         <div class="field"><label class="field__label" for="new-item-description">가방 설명</label><textarea class="textarea" id="new-item-description" name="description" placeholder="플레이어 가방에 표시할 설명"></textarea></div>
                         <div class="field"><label class="field__label" for="new-item-clue">단서장 내용</label><textarea class="textarea" id="new-item-clue" name="clueText" placeholder="스캔 후 다시 볼 상세 단서"></textarea></div>
+                        <div class="field"><label class="field__label" for="new-item-copy">복사할 텍스트</label><input class="input" id="new-item-copy" name="copyableText" maxlength="1000" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="긴 암호나 코드가 있을 때 입력"></div>
+                        <div class="card__body form-grid" th:unless="${items == null or #lists.isEmpty(items)}" style="background:var(--surface);border-radius:var(--radius-md)">
+                            <h3 style="margin:0">조건부 재스캔 장면 <span class="badge">선택</span></h3>
+                            <div class="field">
+                                <label class="field__label" for="new-item-alternate-required">조건 아이템</label>
+                                <select class="select" id="new-item-alternate-required" name="alternateRequiredItem">
+                                    <option value="">사용 안 함</option>
+                                    <option th:each="conditionItem : ${items}" th:value="${conditionItem.stableKey}" th:text="${conditionItem.name}">조건 아이템</option>
+                                </select>
+                            </div>
+                            <div class="field"><label class="field__label" for="new-item-alternate-text">조건 충족 후 장면</label><textarea class="textarea" id="new-item-alternate-text" name="alternateScanText" maxlength="4000" placeholder="조건 아이템을 가진 뒤 다시 스캔했을 때 보여 줄 장면"></textarea></div>
+                        </div>
                         <div class="item-media-editor"><div class="item-thumb item-thumb--preview"><img id="new-item-photo-preview" hidden alt="새 아이템 이미지 미리보기"><span aria-hidden="true">📷</span></div><div class="field"><label class="field__label" for="new-item-photo">사진 촬영 또는 선택</label><input class="file-input" id="new-item-photo" type="file" name="photo" accept="image/*" capture="environment" data-photo-input="new-item-photo-preview"></div></div>
+                        <label class="tool-toggle"><span><strong>시작 아이템</strong><small>게임을 시작할 때부터 플레이어 가방에 넣습니다.</small></span><input type="checkbox" name="initiallyOwned" value="true"><span class="toggle-ui" aria-hidden="true"></span></label>
                         <label class="tool-toggle"><span><strong>QR 단서 사용</strong><small>기본으로 전용 QR을 발급합니다. 일반 보상 아이템이면 끌 수 있습니다.</small></span><input type="checkbox" name="qrEnabled" value="true" checked><span class="toggle-ui" aria-hidden="true"></span></label>
                         <button class="btn" type="submit">QR 단서·아이템 추가</button>
                     </form>
@@ -532,6 +589,10 @@
                         <div style="width:min(220px,100%);margin:1rem auto;text-align:center">
                             <img th:src="@{/maker/games/{id}/qr(id=${game.id})}" th:alt="|${game.title} 플레이 QR 코드|">
                             <a class="btn btn--secondary btn--small btn--block" th:href="@{/maker/games/{id}/qr(id=${game.id},download=true)}" download style="margin-top:.75rem">QR 다운로드</a>
+                        </div>
+                        <div class="qr-kit-callout">
+                            <div><strong>QR을 한 장씩 받고 있나요?</strong><p>시작·문제·단서 QR을 한 화면에서 확인하고, A4 PDF 한 문서나 원본 PNG ZIP으로 한 번에 받으세요.</p></div>
+                            <a class="btn btn--block" th:href="@{/maker/games/{id}/qr-kit(id=${game.id})}">QR 일괄 다운로드·인쇄</a>
                         </div>
                         <form th:action="@{/maker/games/{id}/hide(id=${game.id})}" method="post">
                             <button class="btn btn--quiet btn--block" type="submit" data-confirm="게임을 숨길까요? 기존 플레이 세션은 계속 진행할 수 있습니다.">새 플레이 숨기기</button>

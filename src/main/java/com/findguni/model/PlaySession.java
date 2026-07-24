@@ -1,6 +1,8 @@
 package com.findguni.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 
 @Entity
@@ -28,6 +30,10 @@ public class PlaySession {
     private String inventoryJson = "[]";
 
     @Lob
+    @Column(name = "consumed_items_json", columnDefinition = "LONGTEXT")
+    private String consumedItemsJson = "[]";
+
+    @Lob
     @Column(name = "discovered_stages_json", columnDefinition = "LONGTEXT")
     private String discoveredStagesJson = "[]";
 
@@ -43,6 +49,7 @@ public class PlaySession {
     private String notes;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private PlayStatus status = PlayStatus.ACTIVE;
 
@@ -60,6 +67,13 @@ public class PlaySession {
 
     @Column(name = "hints_used", nullable = false)
     private int hintsUsed;
+
+    @Lob
+    @Column(name = "revealed_hints_json", columnDefinition = "LONGTEXT")
+    private String revealedHintsJson = "[]";
+
+    @Column(name = "last_hint_at")
+    private Instant lastHintAt;
 
     @Version
     private long entityVersion;
@@ -84,7 +98,12 @@ public class PlaySession {
 
     public void recordSuccessfulAttempt() { attemptCount++; touch(); }
 
-    public void recordHint() { hintsUsed++; touch(); }
+    public void recordHint(String revealedHintsJson) {
+        hintsUsed++;
+        this.revealedHintsJson = revealedHintsJson;
+        lastHintAt = Instant.now();
+        touch();
+    }
 
     public void complete() {
         status = PlayStatus.COMPLETED;
@@ -100,6 +119,8 @@ public class PlaySession {
     public int getProgressIndex() { return progressIndex; }
     public String getInventoryJson() { return inventoryJson; }
     public void setInventoryJson(String inventoryJson) { this.inventoryJson = inventoryJson; }
+    public String getConsumedItemsJson() { return consumedItemsJson; }
+    public void setConsumedItemsJson(String consumedItemsJson) { this.consumedItemsJson = consumedItemsJson; }
     public String getDiscoveredStagesJson() { return discoveredStagesJson; }
     public void setDiscoveredStagesJson(String discoveredStagesJson) { this.discoveredStagesJson = discoveredStagesJson; }
     public String getSolvedStagesJson() { return solvedStagesJson; }
@@ -114,6 +135,8 @@ public class PlaySession {
     public Instant getCompletedAt() { return completedAt; }
     public int getAttemptCount() { return attemptCount; }
     public int getHintsUsed() { return hintsUsed; }
+    public String getRevealedHintsJson() { return revealedHintsJson; }
+    public Instant getLastHintAt() { return lastHintAt; }
     public boolean isActive() { return status == PlayStatus.ACTIVE; }
     public boolean isCompleted() { return status == PlayStatus.COMPLETED; }
 }

@@ -2,6 +2,8 @@ package com.findguni.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 
 @Entity
@@ -30,6 +32,7 @@ public class GameItem {
     private String emoji = "🗝️";
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "item_type", nullable = false, length = 20)
     @ColumnDefault("'CUSTOM'")
     private ItemType itemType = ItemType.CUSTOM;
@@ -44,6 +47,20 @@ public class GameItem {
     @Column(name = "qr_enabled", nullable = false)
     @ColumnDefault("false")
     private boolean qrEnabled;
+
+    @Column(name = "initially_owned", nullable = false)
+    @ColumnDefault("false")
+    private boolean initiallyOwned;
+
+    @Column(name = "copyable_text", length = 1000)
+    private String copyableText;
+
+    @Column(name = "alternate_required_item", length = 36)
+    private String alternateRequiredItem;
+
+    @Lob
+    @Column(name = "alternate_scan_text", columnDefinition = "LONGTEXT")
+    private String alternateScanText;
 
     public GameItem() {}
 
@@ -75,4 +92,14 @@ public class GameItem {
     public void setClueText(String clueText) { this.clueText = clueText; }
     public boolean isQrEnabled() { return qrEnabled; }
     public void setQrEnabled(boolean qrEnabled) { this.qrEnabled = qrEnabled; }
+    public boolean isInitiallyOwned() { return initiallyOwned; }
+    public void setInitiallyOwned(boolean initiallyOwned) { this.initiallyOwned = initiallyOwned; }
+    public String getCopyableText() { return copyableText; }
+    public void setCopyableText(String copyableText) { this.copyableText = copyableText; }
+    public String getAlternateRequiredItem() { return alternateRequiredItem; }
+    public void setAlternateRequiredItem(String alternateRequiredItem) {
+        this.alternateRequiredItem = alternateRequiredItem;
+    }
+    public String getAlternateScanText() { return alternateScanText; }
+    public void setAlternateScanText(String alternateScanText) { this.alternateScanText = alternateScanText; }
 }

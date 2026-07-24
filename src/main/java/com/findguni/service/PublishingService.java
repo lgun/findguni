@@ -46,7 +46,8 @@ public class PublishingService {
             stageSnapshots.add(new ReleaseSnapshot.StageSnapshot(
                     stage.getStableKey(), i, stage.getTitle(), stage.getStory(), stage.getInstruction(),
                     stage.getHint(), stage.getPuzzleType(), digest, parseOptions(stage.getOptionsText()),
-                    stage.getLockLength(), stage.getRequiredItem(), stage.getRewardItem(),
+                    stage.getLockLength(), stage.getRequiredItem(), stage.getRequiredItems(),
+                    stage.isConsumeRequiredItems(), stage.getRewardItem(),
                     stage.isQrEnabled(), stage.getEntryMode(), stage.getNextStageKey(),
                     stage.getStoryEffect(), stage.getSceneImageUrl(), stage.getSfxUrl(), stage.getSfxTitle(),
                     stage.getSfxCreator(), stage.getSfxLicense(), stage.getSfxLicenseUrl(),
@@ -55,7 +56,8 @@ public class PublishingService {
         List<ReleaseSnapshot.ItemSnapshot> itemSnapshots = draftItems.stream()
                 .map(item -> new ReleaseSnapshot.ItemSnapshot(item.getStableKey(), item.getName(),
                         item.getDescription(), item.getEmoji(), item.getItemType(), item.getImageUrl(),
-                        item.getClueText(), item.isQrEnabled()))
+                        item.getClueText(), item.isQrEnabled(), item.isInitiallyOwned(), item.getCopyableText(),
+                        item.getAlternateRequiredItem(), item.getAlternateScanText()))
                 .toList();
         ReleaseSnapshot snapshot = new ReleaseSnapshot(game.getId(), game.getSlug(), game.getTitle(),
                 game.getSummary(), game.getIntro(), game.getCoverImageUrl(), game.getAccentColor(),
@@ -66,7 +68,8 @@ public class PublishingService {
                 game.getBgmLicenseUrl(), game.getBgmSourceUrl(), game.getBgmVolume(), game.isBgmLoop(),
                 game.getStoryTextSpeed(), game.isEnableVignette(),
                 game.getTheme(), game.getDifficulty(),
-                game.getEstimatedMinutes(), List.copyOf(stageSnapshots), List.copyOf(itemSnapshots));
+                game.getEstimatedMinutes(), List.copyOf(stageSnapshots), List.copyOf(itemSnapshots),
+                game.isUnlimitedHints(), game.getHintLimit(), game.getHintCooldownSeconds());
 
         int nextVersion = game.getPublishedVersion() + 1;
         GameRelease release = releases.save(new GameRelease(game, nextVersion, toJson(snapshot)));
@@ -96,6 +99,18 @@ public class PublishingService {
         Set<String> stageKeys = new HashSet<>();
         draftItems.forEach(item -> itemKeys.add(item.getStableKey()));
         draftStages.forEach(stage -> stageKeys.add(stage.getStableKey()));
+        for (GameItem item : draftItems) {
+            if (item.getAlternateRequiredItem() != null
+                    && !itemKeys.contains(item.getAlternateRequiredItem())) {
+                throw new IllegalArgumentException("'" + item.getName()
+                        + "'의 대체 QR 장면 조건 아이템이 존재하지 않습니다.");
+            }
+            if (item.getAlternateRequiredItem() != null
+                    && (item.getAlternateScanText() == null || item.getAlternateScanText().isBlank())) {
+                throw new IllegalArgumentException("'" + item.getName()
+                        + "'의 대체 QR 장면 내용을 입력해 주세요.");
+            }
+        }
         for (GameStage stage : draftStages) {
             if (stage.getPuzzleType().requiresAnswer() &&
                     (stage.getDraftAnswer() == null || answers.normalize(stage.getPuzzleType(), stage.getDraftAnswer()).isBlank())) {
@@ -104,7 +119,7 @@ public class PublishingService {
             if (stage.getPuzzleType() == PuzzleType.MULTIPLE_CHOICE && parseOptions(stage.getOptionsText()).size() < 2) {
                 throw new IllegalArgumentException("'" + stage.getTitle() + "' 객관식 선택지를 두 개 이상 입력해 주세요.");
             }
-            if (stage.getRequiredItem() != null && !itemKeys.contains(stage.getRequiredItem())) {
+            if (!itemKeys.containsAll(stage.getRequiredItems())) {
                 throw new IllegalArgumentException("'" + stage.getTitle() + "'의 필요 아이템이 존재하지 않습니다.");
             }
             if (stage.getRewardItem() != null && !itemKeys.contains(stage.getRewardItem())) {
@@ -122,7 +137,8 @@ public class PublishingService {
 
     private void validateSolvableFlow(GameFlowMode flowMode, List<GameStage> draftStages, List<GameItem> draftItems) {
         Set<String> availableItems = new HashSet<>();
-        draftItems.stream().filter(GameItem::isQrEnabled).map(GameItem::getStableKey).forEach(availableItems::add);
+        draftItems.stream().filter(item -> item.isQrEnabled() || item.isInitiallyOwned())
+                .map(GameItem::getStableKey).forEach(availableItems::add);
 
         if (flowMode == null || flowMode == GameFlowMode.LINEAR) {
             for (GameStage stage : draftStages) {
@@ -163,10 +179,11 @@ public class PublishingService {
     }
 
     private boolean hasRequirement(GameStage stage, Set<String> availableItems) {
-        return stage.getRequiredItem() == null || availableItems.contains(stage.getRequiredItem());
+        return availableItems.containsAll(stage.getRequiredItems());
     }
 
     private void grantReward(GameStage stage, Set<String> availableItems) {
+        if (stage.isConsumeRequiredItems()) availableItems.removeAll(stage.getRequiredItems());
         if (stage.getRewardItem() != null) availableItems.add(stage.getRewardItem());
     }
 

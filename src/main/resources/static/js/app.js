@@ -38,6 +38,12 @@
         });
     }
 
+    function initPrintButtons() {
+        document.querySelectorAll('[data-print-page]').forEach(function (button) {
+            button.addEventListener('click', function () { window.print(); });
+        });
+    }
+
     function initPasswordToggles() {
         document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
             var input = document.getElementById(button.getAttribute('aria-controls'));
@@ -713,6 +719,7 @@
         initNavigation();
         initDismissibleAlerts();
         initConfirmations();
+        initPrintButtons();
         initPasswordToggles();
         initBuilderTabs();
         initStageWorkspaces();

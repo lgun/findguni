@@ -1,5 +1,7 @@
 package com.findguni.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.findguni.model.Difficulty;
 import com.findguni.model.EscapeGame;
 import com.findguni.model.GameItem;
@@ -37,6 +39,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 })
 @Transactional
 class TemplateAndSnapshotIntegrationTest {
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private static final List<String> TEMPLATE_IDS = List.of(
             "BLANK", "QUICK_10", "MYSTERY_MANSION", "DETECTIVE_CASE",
@@ -92,7 +97,7 @@ class TemplateAndSnapshotIntegrationTest {
     }
 
     @Test
-    void customThemeToolFlagsAndRichItemFieldsRemainImmutableInPublishedSnapshot() {
+    void customThemeToolFlagsAndRichItemFieldsRemainImmutableInPublishedSnapshot() throws Exception {
         UserAccount owner = signup("snapshot-owner");
         EscapeGame game = authoring.create(owner, "Snapshot", uniqueSlug("snapshot"), "QUICK_10",
                 GameTheme.MIDNIGHT, Difficulty.NORMAL, 30);
@@ -101,16 +106,21 @@ class TemplateAndSnapshotIntegrationTest {
         authoring.updateSettings(game.getId(), owner, "Snapshot", game.getSlug(), "summary", "intro", null,
                 "#112233", "#445566", "#778899", "🧭",
                 false, true, false, GameTheme.MANSION, Difficulty.HARD, 75, GameVisibility.PUBLIC);
+        authoring.updateHintPolicy(game.getId(), owner, false, 4, 20);
         GameItem item = authoring.addItem(game.getId(), owner, ItemType.MAP, "Archive map",
                 "A map with a torn corner", "The red line begins at the clock", "🗺️", true, imageUrl);
 
         GameRelease firstRelease = publishing.publish(game.getId(), owner);
         String firstJson = firstRelease.getSnapshotJson();
         ReleaseSnapshot first = publishing.readSnapshot(firstRelease);
+        ObjectNode legacyJson = (ObjectNode) objectMapper.readTree(firstJson);
+        legacyJson.remove(List.of("unlimitedHints", "hintLimit", "hintCooldownSeconds"));
+        ReleaseSnapshot legacySnapshot = objectMapper.treeToValue(legacyJson, ReleaseSnapshot.class);
 
         authoring.updateSettings(game.getId(), owner, "Changed draft", game.getSlug(), "changed", "changed", null,
                 "#AABBCC", "#DDEEFF", "#010203", "🔒",
                 true, false, true, GameTheme.LAB, Difficulty.EASY, 15, GameVisibility.LINK_ONLY);
+        authoring.updateHintPolicy(game.getId(), owner, true, 9, 0);
         authoring.updateItem(game.getId(), item.getId(), owner, ItemType.EVIDENCE, "Changed item",
                 "changed", "changed", "🔍", false, null);
 
@@ -125,6 +135,12 @@ class TemplateAndSnapshotIntegrationTest {
         assertThat(first.allowNotebook()).isFalse();
         assertThat(first.allowCluebook()).isTrue();
         assertThat(first.allowQrScanner()).isFalse();
+        assertThat(first.isUnlimitedHints()).isFalse();
+        assertThat(first.getHintLimit()).isEqualTo(4);
+        assertThat(first.getHintCooldownSeconds()).isEqualTo(20);
+        assertThat(legacySnapshot.isUnlimitedHints()).isTrue();
+        assertThat(legacySnapshot.getHintLimit()).isEqualTo(3);
+        assertThat(legacySnapshot.getHintCooldownSeconds()).isZero();
         assertThat(publishedItem.itemType()).isEqualTo(ItemType.MAP);
         assertThat(publishedItem.name()).isEqualTo("Archive map");
         assertThat(publishedItem.description()).isEqualTo("A map with a torn corner");

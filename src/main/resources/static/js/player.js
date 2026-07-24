@@ -26,21 +26,42 @@
         function updateAnswer() {
             setAnswer(shell, wheels.map(function (wheel) { return wheel.dataset.value; }).join(''));
         }
+        function render(wheel) {
+            var values = valuesFor(wheel);
+            var index = values.indexOf(wheel.dataset.value);
+            var previous = wheel.querySelector('[data-wheel-prev]');
+            var current = wheel.querySelector('[data-wheel-value]');
+            var next = wheel.querySelector('[data-wheel-next]');
+            if (previous) previous.textContent = values[(index - 1 + values.length) % values.length];
+            if (current) current.textContent = values[index];
+            if (next) next.textContent = values[(index + 1) % values.length];
+            wheel.setAttribute('aria-valuetext', values[index]);
+            wheel.setAttribute('aria-valuenow', String(index));
+        }
+        function tactileTick(wheel, amount) {
+            wheel.style.setProperty('--dial-nudge', amount > 0 ? '.28rem' : '-.28rem');
+            wheel.classList.remove('is-turning');
+            void wheel.offsetWidth;
+            wheel.classList.add('is-turning');
+            window.setTimeout(function () { wheel.classList.remove('is-turning'); }, 140);
+            if (navigator.vibrate) navigator.vibrate(7);
+        }
         function move(wheel, amount) {
             var values = valuesFor(wheel);
             var index = values.indexOf(wheel.dataset.value);
             index = (index + amount + values.length) % values.length;
             wheel.dataset.value = values[index];
-            var output = wheel.querySelector('[data-wheel-value]');
-            output.textContent = values[index];
-            wheel.setAttribute('aria-valuetext', values[index]);
-            wheel.setAttribute('aria-valuenow', String(index));
+            render(wheel);
+            tactileTick(wheel, amount);
             updateAnswer();
         }
 
         wheels.forEach(function (wheel) {
             var startY = null;
+            var pointerId = null;
+            var lastWheelAt = 0;
             wheel.dataset.value = valuesFor(wheel)[0];
+            render(wheel);
             wheel.querySelectorAll('[data-wheel-move]').forEach(function (button) {
                 button.addEventListener('click', function () { move(wheel, Number(button.dataset.wheelMove)); });
             });
@@ -48,16 +69,29 @@
                 if (event.key === 'ArrowUp') { event.preventDefault(); move(wheel, 1); }
                 if (event.key === 'ArrowDown') { event.preventDefault(); move(wheel, -1); }
             });
-            wheel.addEventListener('touchstart', function (event) { startY = event.changedTouches[0].clientY; }, { passive: true });
-            wheel.addEventListener('touchend', function (event) {
-                if (startY === null) return;
-                var delta = event.changedTouches[0].clientY - startY;
-                if (Math.abs(delta) > 24) move(wheel, delta < 0 ? 1 : -1);
+            wheel.addEventListener('wheel', function (event) {
+                event.preventDefault();
+                if (Date.now() - lastWheelAt < 85) return;
+                lastWheelAt = Date.now();
+                move(wheel, event.deltaY < 0 ? 1 : -1);
+            }, { passive: false });
+            wheel.addEventListener('pointerdown', function (event) {
+                if (event.target.closest('[data-wheel-move]')) return;
+                startY = event.clientY;
+                pointerId = event.pointerId;
+                wheel.setPointerCapture(pointerId);
+            });
+            wheel.addEventListener('pointerup', function (event) {
+                if (startY === null || event.pointerId !== pointerId) return;
+                var delta = event.clientY - startY;
+                if (Math.abs(delta) > 18) move(wheel, delta < 0 ? 1 : -1);
                 startY = null;
-            }, { passive: true });
+                pointerId = null;
+            });
+            wheel.addEventListener('pointercancel', function () { startY = null; pointerId = null; });
         });
         updateAnswer();
-        announce(shell, '각 휠을 위아래로 밀거나 화살표 버튼으로 조절하세요.');
+        announce(shell, '다이얼을 위아래로 밀거나 화살표 키로 한 칸씩 돌리세요.');
     }
 
     function initKeypad(shell) {
@@ -77,7 +111,12 @@
             update();
         }
         shell.querySelectorAll('[data-keypad-key]').forEach(function (button) {
-            button.addEventListener('click', function () { input(button.dataset.keypadKey); });
+            button.addEventListener('click', function () {
+                button.classList.add('is-pressed');
+                window.setTimeout(function () { button.classList.remove('is-pressed'); }, 110);
+                if (navigator.vibrate) navigator.vibrate(8);
+                input(button.dataset.keypadKey);
+            });
         });
         shell.addEventListener('keydown', function (event) {
             if (/^\d$/.test(event.key)) { event.preventDefault(); input(event.key); }
@@ -167,7 +206,56 @@
         if (!source) return;
         function update() { setAnswer(shell, source.value); }
         source.addEventListener('input', update);
+        var pasteButton = shell.querySelector('[data-paste-answer]');
+        if (pasteButton) pasteButton.addEventListener('click', function () {
+            if (navigator.clipboard && window.isSecureContext && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(function (value) {
+                    source.value = value;
+                    update();
+                    source.focus();
+                    announce(shell, '클립보드의 비밀번호를 도어락에 붙여넣었습니다.');
+                }).catch(function () {
+                    source.focus();
+                    announce(shell, '입력 화면을 길게 눌러 직접 붙여넣어 주세요.');
+                });
+            } else {
+                source.focus();
+                announce(shell, '입력 화면을 길게 눌러 직접 붙여넣어 주세요.');
+            }
+        });
         update();
+    }
+
+    function initCopyableItems() {
+        document.querySelectorAll('[data-copy-text]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var value = button.dataset.copyValue || '';
+                var status = button.parentElement.querySelector('[data-copy-status]');
+                function done() {
+                    if (status) status.textContent = '복사했어! 중간에 흘리지 마.';
+                }
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(value).then(done).catch(function () { fallbackCopy(value, done); });
+                } else {
+                    fallbackCopy(value, done);
+                }
+            });
+        });
+    }
+
+    function fallbackCopy(value, onSuccess) {
+        var field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        try {
+            if (document.execCommand('copy')) onSuccess();
+        } finally {
+            document.body.removeChild(field);
+        }
     }
 
     function initToolDrawer() {
@@ -254,6 +342,35 @@
         });
     }
 
+    function initHintCooldown() {
+        var button = document.querySelector('[data-hint-wait-seconds]');
+        if (!button) return;
+        var initialSeconds = Number(button.dataset.hintWaitSeconds || 0);
+        if (initialSeconds <= 0) return;
+        var readyAt = Date.now() + initialSeconds * 1000;
+        var status = document.querySelector('[data-hint-policy-status]');
+        var readyLabel = button.dataset.hintReadyLabel || '힌트 보기';
+
+        function update() {
+            var seconds = Math.max(0, Math.ceil((readyAt - Date.now()) / 1000));
+            if (seconds === 0) {
+                button.disabled = false;
+                button.textContent = readyLabel;
+                if (status) status.textContent = '지금 다음 힌트를 볼 수 있습니다.';
+                return false;
+            }
+            button.disabled = true;
+            button.textContent = seconds + '초 후 사용';
+            if (status) status.textContent = seconds + '초 후 다음 힌트를 볼 수 있습니다.';
+            return true;
+        }
+
+        if (!update()) return;
+        var timer = window.setInterval(function () {
+            if (!update()) window.clearInterval(timer);
+        }, 250);
+    }
+
     ready(function () {
         document.querySelectorAll('[data-puzzle]').forEach(function (shell) {
             initWheels(shell);
@@ -263,6 +380,8 @@
             initChoices(shell);
             initTextAnswer(shell);
         });
+        initCopyableItems();
         initToolDrawer();
+        initHintCooldown();
     });
 }());
