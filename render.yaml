@@ -10,7 +10,6 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
-    maxShutdownDelaySeconds: 20
     autoDeployTrigger: commit
     envVars:
       - key: PORT
