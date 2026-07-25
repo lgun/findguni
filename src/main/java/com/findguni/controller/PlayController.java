@@ -1,6 +1,5 @@
 package com.findguni.controller;
 
-import com.findguni.model.EscapeGame;
 import com.findguni.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,14 +15,12 @@ import java.util.Map;
 @RequestMapping("/play/{slug}")
 public class PlayController {
     private final PlayService plays;
-    private final PublishingService publishing;
     private final AnonymousDeviceService devices;
     private final QRCodeService qrCodes;
 
-    public PlayController(PlayService plays, PublishingService publishing, AnonymousDeviceService devices,
+    public PlayController(PlayService plays, AnonymousDeviceService devices,
                           QRCodeService qrCodes) {
         this.plays = plays;
-        this.publishing = publishing;
         this.devices = devices;
         this.qrCodes = qrCodes;
     }
@@ -34,9 +31,7 @@ public class PlayController {
         String deviceHash = rawToken == null ? null : devices.hash(rawToken);
         boolean hasActive = deviceHash != null && plays.hasActiveSession(slug, deviceHash);
         PlayService.PlayView activeView = hasActive ? plays.current(slug, deviceHash) : null;
-        EscapeGame game = hasActive ? null : plays.playableGame(slug);
-        ReleaseSnapshot snapshot = hasActive ? activeView.game()
-                : publishing.readSnapshot(publishing.currentRelease(game));
+        ReleaseSnapshot snapshot = hasActive ? activeView.game() : plays.publishedSnapshot(slug);
         model.addAttribute("game", snapshot);
         model.addAttribute("hasActiveSession", hasActive);
         if (hasActive) {
@@ -109,7 +104,7 @@ public class PlayController {
         String rawToken = devices.token(request).orElse(null);
         if (rawToken == null) return "redirect:/play/" + slug;
         if (!plays.selectDiscoveredStage(slug, devices.hash(rawToken), stableKey)) {
-            redirect.addFlashAttribute("error", "아직 발견하지 않았거나 이미 해결한 문제입니다.");
+            redirect.addFlashAttribute("error", "Unable to select that stage.");
         }
         return "redirect:/play/" + slug + "/stage";
     }
@@ -123,7 +118,7 @@ public class PlayController {
         PlayService.SolveResult result = plays.solve(slug, devices.hash(rawToken), answer);
         if (!result.success()) redirect.addFlashAttribute("error", result.message());
         else redirect.addFlashAttribute("success",
-                result.message() == null || result.message().isBlank() ? "다음 단계로 이동합니다." : result.message());
+                result.message() == null || result.message().isBlank() ? "The answer is accepted." : result.message());
         return "redirect:/play/" + slug + "/stage";
     }
 
@@ -155,7 +150,7 @@ public class PlayController {
         if (rawToken == null) return "redirect:/play/" + slug;
         try {
             plays.saveNotes(slug, devices.hash(rawToken), notes);
-            redirect.addFlashAttribute("success", "노트를 저장했습니다.");
+            redirect.addFlashAttribute("success", "Notes saved.");
         } catch (IllegalArgumentException e) {
             redirect.addFlashAttribute("error", e.getMessage());
         }
@@ -172,7 +167,7 @@ public class PlayController {
         String rawToken = devices.token(request).orElse(null);
         if (rawToken == null) {
             return ResponseEntity.status(409).body(new PlayService.QrScanResult(
-                    false, false, false, "먼저 게임을 시작해 주세요.", null));
+                    false, false, false, "No player session found. Start the game first.", null, null, null));
         }
         try {
             String detected = payload;
@@ -182,18 +177,24 @@ public class PlayController {
             QRCodeService.QrTarget target = qrCodes.parseTarget(detected, slug).orElse(null);
             if (target == null) {
                 return ResponseEntity.ok(new PlayService.QrScanResult(
-                        false, false, false, "현재 게임의 문제나 단서 QR을 찾지 못했습니다.", null));
+                        false, false, false, "Invalid QR code for this game.", "STAGE", null, null));
             }
             if (target.type() == QRCodeService.QrTargetType.STAGE) {
-                return ResponseEntity.ok(plays.scanStage(slug, devices.hash(rawToken), target.stableKey(), true));
+                PlayService.QrScanResult result = plays.scanStage(slug, devices.hash(rawToken), target.stableKey(), true);
+                String redirectUrl = "/play/" + slug + "/puzzle/" + target.stableKey();
+                return ResponseEntity.ok(new PlayService.QrScanResult(
+                        result.found(), result.accepted(), result.success(), result.message(), "STAGE", redirectUrl, null));
             }
-            return ResponseEntity.ok(plays.scanClue(slug, devices.hash(rawToken), target.stableKey()));
+            PlayService.ClueScanResult clue = plays.scanClue(slug, devices.hash(rawToken), target.stableKey());
+            String redirectUrl = "/play/" + slug + "/clue/" + target.stableKey();
+            return ResponseEntity.ok(new PlayService.QrScanResult(
+                    clue.found(), clue.accepted(), clue.success(), clue.message(), "CLUE", redirectUrl,
+                    clue.getItem() == null ? null : clue.getItem().stableKey()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new PlayService.QrScanResult(
-                    false, false, false, e.getMessage(), null));
+                    false, false, false, e.getMessage(), null, null, null));
         }
     }
-
     @GetMapping("/clue/{stableKey}")
     public String clue(@PathVariable String slug, @PathVariable String stableKey,
                        HttpServletRequest request, HttpServletResponse response,
@@ -246,3 +247,4 @@ public class PlayController {
         return "";
     }
 }
+

@@ -130,6 +130,10 @@ public class PlaySession {
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; touch(); }
     public PlayStatus getStatus() { return status; }
+    public void setStatus(PlayStatus status) { this.status = status; touch(); }
+    public void setProgressIndex(int progressIndex) { this.progressIndex = progressIndex; touch(); }
+    public void setRelease(GameRelease release) { this.release = release; touch(); }
+    public void setRevealedHintsJson(String revealedHintsJson) { this.revealedHintsJson = revealedHintsJson; touch(); }
     public Instant getStartedAt() { return startedAt; }
     public Instant getLastActivityAt() { return lastActivityAt; }
     public Instant getCompletedAt() { return completedAt; }

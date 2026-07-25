@@ -49,7 +49,7 @@
             if (contentType.indexOf('application/json') >= 0) {
                 var data = await response.json();
                 var accepted = typeof data.accepted === 'boolean' ? data.accepted : data.success !== false;
-                return { success: accepted, message: data.message || '', found: data.found !== false };
+                return { success: accepted, message: data.message || '', found: data.found !== false, redirectUrl: data.redirectUrl || null };
             }
             return { success: response.ok, message: '' };
         }
@@ -63,9 +63,15 @@
                 if (csrfMeta && csrfHeaderMeta) headers[csrfHeaderMeta.content] = csrfMeta.content;
                 var response = await fetch(endpoint, { method: 'POST', body: formData, headers: headers, credentials: 'same-origin', redirect: 'follow' });
                 var result = await responseMessage(response);
-                if (!response.ok || !result.success) throw new Error(result.message || '이 게임에서 사용할 수 없는 QR입니다.');
                 stop();
-                message(result.message || '단서를 발견했습니다. 가방과 단서장을 새로 불러옵니다.', 'success');
+                message(result.message || '단서를 확인했습니다. 잠시 뒤 페이지로 이동합니다.', 'success');
+                if (result.redirectUrl) {
+                    window.location.assign(result.redirectUrl);
+                    return;
+                }
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || '이 게임에서 사용할 수 없는 QR입니다.');
+                }
                 window.setTimeout(function () { window.location.reload(); }, 650);
             } catch (error) {
                 message(error && error.message ? error.message : 'QR을 확인하지 못했습니다. 다시 시도해 주세요.', 'error');

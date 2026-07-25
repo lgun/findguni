@@ -38,38 +38,7 @@ public class PublishingService {
         List<GameItem> draftItems = items.findAllByGameIdOrderByIdAsc(gameId);
         validate(game, draftStages, draftItems);
 
-        List<ReleaseSnapshot.StageSnapshot> stageSnapshots = new ArrayList<>();
-        for (int i = 0; i < draftStages.size(); i++) {
-            GameStage stage = draftStages.get(i);
-            String digest = stage.getPuzzleType().requiresAnswer()
-                    ? answers.digest(stage.getPuzzleType(), stage.getDraftAnswer()) : null;
-            stageSnapshots.add(new ReleaseSnapshot.StageSnapshot(
-                    stage.getStableKey(), i, stage.getTitle(), stage.getStory(), stage.getInstruction(),
-                    stage.getHint(), stage.getPuzzleType(), digest, parseOptions(stage.getOptionsText()),
-                    stage.getLockLength(), stage.getRequiredItem(), stage.getRequiredItems(),
-                    stage.isConsumeRequiredItems(), stage.getRewardItem(),
-                    stage.isQrEnabled(), stage.getEntryMode(), stage.getNextStageKey(),
-                    stage.getStoryEffect(), stage.getSceneImageUrl(), stage.getSfxUrl(), stage.getSfxTitle(),
-                    stage.getSfxCreator(), stage.getSfxLicense(), stage.getSfxLicenseUrl(),
-                    stage.getSfxSourceUrl(), stage.getSfxVolume()));
-        }
-        List<ReleaseSnapshot.ItemSnapshot> itemSnapshots = draftItems.stream()
-                .map(item -> new ReleaseSnapshot.ItemSnapshot(item.getStableKey(), item.getName(),
-                        item.getDescription(), item.getEmoji(), item.getItemType(), item.getImageUrl(),
-                        item.getClueText(), item.isQrEnabled(), item.isInitiallyOwned(), item.getCopyableText(),
-                        item.getAlternateRequiredItem(), item.getAlternateScanText()))
-                .toList();
-        ReleaseSnapshot snapshot = new ReleaseSnapshot(game.getId(), game.getSlug(), game.getTitle(),
-                game.getSummary(), game.getIntro(), game.getCoverImageUrl(), game.getAccentColor(),
-                game.getSecondaryColor(), game.getBackgroundColor(), game.getGameIcon(),
-                game.isAllowNotebook(), game.isAllowCluebook(), game.isAllowQrScanner(),
-                game.getFlowMode(),
-                game.getBgmUrl(), game.getBgmTitle(), game.getBgmCreator(), game.getBgmLicense(),
-                game.getBgmLicenseUrl(), game.getBgmSourceUrl(), game.getBgmVolume(), game.isBgmLoop(),
-                game.getStoryTextSpeed(), game.isEnableVignette(),
-                game.getTheme(), game.getDifficulty(),
-                game.getEstimatedMinutes(), List.copyOf(stageSnapshots), List.copyOf(itemSnapshots),
-                game.isUnlimitedHints(), game.getHintLimit(), game.getHintCooldownSeconds());
+        ReleaseSnapshot snapshot = snapshot(game, draftStages, draftItems);
 
         int nextVersion = game.getPublishedVersion() + 1;
         GameRelease release = releases.save(new GameRelease(game, nextVersion, toJson(snapshot)));
@@ -79,10 +48,102 @@ public class PublishingService {
     }
 
     @Transactional(readOnly = true)
+    public ReleaseSnapshot snapshot(EscapeGame game) {
+        List<GameStage> draftStages = stages.findAllByGameIdOrderByPositionAsc(game.getId());
+        List<GameItem> draftItems = items.findAllByGameIdOrderByIdAsc(game.getId());
+        return snapshot(game, draftStages, draftItems);
+    }
+
+    @Transactional(readOnly = true)
     public GameRelease currentRelease(EscapeGame game) {
         if (game.getPublishedVersion() < 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return releases.findByGameIdAndVersionNumber(game.getId(), game.getPublishedVersion())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    private ReleaseSnapshot snapshot(EscapeGame game, List<GameStage> draftStages, List<GameItem> draftItems) {
+        List<ReleaseSnapshot.StageSnapshot> stageSnapshots = draftStages.stream()
+                .map(stage -> new ReleaseSnapshot.StageSnapshot(
+                        stage.getStableKey(),
+                        stage.getPosition(),
+                        stage.getTitle(),
+                        stage.getStory(),
+                        stage.getInstruction(),
+                        stage.getHint(),
+                        stage.getPuzzleType(),
+                        stage.getPuzzleType() != null && stage.getPuzzleType().requiresAnswer()
+                                ? answers.digest(stage.getPuzzleType(), stage.getDraftAnswer())
+                                : null,
+                        parseOptions(stage.getOptionsText()),
+                        stage.getLockLength(),
+                        stage.getRequiredItem(),
+                        stage.getRequiredItems(),
+                        stage.isConsumeRequiredItems(),
+                        stage.getRewardItem(),
+                        stage.isQrEnabled(),
+                        stage.getEntryMode(),
+                        stage.getNextStageKey(),
+                        stage.getStoryEffect(),
+                        stage.getSceneImageUrl(),
+                        stage.getSfxUrl(),
+                        stage.getSfxTitle(),
+                        stage.getSfxCreator(),
+                        stage.getSfxLicense(),
+                        stage.getSfxLicenseUrl(),
+                        stage.getSfxSourceUrl(),
+                        stage.getSfxVolume()
+                )).toList();
+
+        List<ReleaseSnapshot.ItemSnapshot> itemSnapshots = draftItems.stream()
+                .map(item -> new ReleaseSnapshot.ItemSnapshot(
+                        item.getStableKey(),
+                        item.getName(),
+                        item.getDescription(),
+                        item.getEmoji(),
+                        item.getItemType(),
+                        item.getImageUrl(),
+                        item.getClueText(),
+                        item.isQrEnabled(),
+                        item.isInitiallyOwned(),
+                        item.getCopyableText(),
+                        item.getAlternateRequiredItem(),
+                        item.getAlternateScanText()
+                )).toList();
+
+        return new ReleaseSnapshot(
+                game.getId(),
+                game.getSlug(),
+                game.getTitle(),
+                game.getSummary(),
+                game.getIntro(),
+                game.getCoverImageUrl(),
+                game.getAccentColor(),
+                game.getSecondaryColor(),
+                game.getBackgroundColor(),
+                game.getGameIcon(),
+                game.isAllowNotebook(),
+                game.isAllowCluebook(),
+                game.isAllowQrScanner(),
+                game.getFlowMode(),
+                game.getBgmUrl(),
+                game.getBgmTitle(),
+                game.getBgmCreator(),
+                game.getBgmLicense(),
+                game.getBgmLicenseUrl(),
+                game.getBgmSourceUrl(),
+                game.getBgmVolume(),
+                game.isBgmLoop(),
+                game.getStoryTextSpeed(),
+                game.isEnableVignette(),
+                game.getTheme(),
+                game.getDifficulty(),
+                game.getEstimatedMinutes(),
+                stageSnapshots,
+                itemSnapshots,
+                game.isUnlimitedHints(),
+                game.getHintLimit(),
+                game.getHintCooldownSeconds()
+        );
     }
 
     public ReleaseSnapshot readSnapshot(GameRelease release) {

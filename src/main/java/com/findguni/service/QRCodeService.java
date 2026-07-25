@@ -22,7 +22,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.util.Optional;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Map;
@@ -30,9 +29,11 @@ import java.util.Map;
 @Service
 public class QRCodeService {
     private final String publicBaseUrl;
+    private final String canonicalHost;
 
     public QRCodeService(@Value("${findguni.public-base-url}") String publicBaseUrl) {
         this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.replaceAll("/+$", "");
+        this.canonicalHost = canonicalHost(this.publicBaseUrl);
     }
 
     public String playUrl(EscapeGame game) {
@@ -115,15 +116,12 @@ public class QRCodeService {
         }
         try {
             URI uri = URI.create(value);
-            URI canonical = URI.create(publicBaseUrl);
-            String path;
-            if (uri.isAbsolute()) {
-                if (!Objects.equals(uri.getScheme(), canonical.getScheme())
-                        || !Objects.equals(uri.getAuthority(), canonical.getAuthority())) return Optional.empty();
-                path = uri.getPath();
-            } else {
-                path = uri.getPath();
+            if (uri.getHost() != null && !canonicalHost.isEmpty()
+                    && !hostMatches(uri.getHost(), canonicalHost)) {
+                return Optional.empty();
             }
+            String path;
+            path = uri.getPath();
             Matcher matcher = Pattern.compile("^/play/" + Pattern.quote(expectedSlug)
                     + "/(clue|puzzle)/([0-9a-fA-F-]{36})/?$").matcher(path);
             if (!matcher.matches()) return Optional.empty();
@@ -132,6 +130,22 @@ public class QRCodeService {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    private String canonicalHost(String baseUrl) {
+        try {
+            if (baseUrl == null || baseUrl.isBlank()) return "";
+            URI uri = URI.create(baseUrl);
+            String host = uri.getHost();
+            return host == null ? "" : host.toLowerCase();
+        } catch (IllegalArgumentException e) {
+            return "";
+        }
+    }
+
+    private boolean hostMatches(String parsedHost, String expectedHost) {
+        if (expectedHost == null || expectedHost.isBlank()) return true;
+        return parsedHost != null && parsedHost.equalsIgnoreCase(expectedHost);
     }
 
     private Optional<String> validStableKey(String key) {
