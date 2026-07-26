@@ -132,8 +132,6 @@ public class PlayService {
         if (flowMode(snapshot) == GameFlowMode.QR_EXPLORATION) {
             stage = snapshot.stages().stream()
                     .filter(candidate -> Objects.equals(candidate.stableKey(), activeSession.getActiveStageKey()))
-                    .filter(candidate -> discoveredStageKeys.contains(candidate.stableKey()))
-                    .filter(candidate -> !solvedStages.contains(candidate.stableKey()))
                     .findFirst().orElse(null);
         } else {
             stage = activeSession.getProgressIndex() < snapshot.stages().size()
@@ -330,14 +328,14 @@ public class PlayService {
                     "Only QR stages can be entered by QR scan.", "STAGE", null, null);
         }
         Set<String> solved = stageKeys(session.getSolvedStagesJson());
-        if (solved.contains(stageStableKey)) {
-            return new QrScanResult(true, true, true, "This stage is already solved.", "STAGE", null, null);
-        }
+        boolean alreadySolved = solved.contains(stageStableKey);
         LinkedHashSet<String> discovered = stageKeys(session.getDiscoveredStagesJson());
         boolean isNew = discovered.add(stageStableKey);
         session.setDiscoveredStagesJson(writeKeys(discovered));
         session.setActiveStageKey(stageStableKey);
-        String message = isNew ? "New stage discovered." : "The stage is already discovered.";
+        String message = alreadySolved
+                ? "This stage is already solved."
+                : isNew ? "New stage discovered." : "The stage is already discovered.";
         String redirectUrl = "/play/" + game.getSlug() + "/puzzle/" + stageStableKey;
         return new QrScanResult(true, true, true, message, "STAGE", redirectUrl, stageStableKey);
     }
@@ -707,9 +705,7 @@ public class PlayService {
 
         String currentActive = session.getActiveStageKey();
         boolean currentActiveIsValid = currentActive != null
-                && stageKeys.contains(currentActive)
-                && normalizedDiscovered.contains(currentActive)
-                && !solved.contains(currentActive);
+                && stageKeys.contains(currentActive);
         String preferredActive = currentActiveIsValid
                 ? currentActive
                 : chooseActiveStage(snapshot, solved, normalizedDiscovered);
