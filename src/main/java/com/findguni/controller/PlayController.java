@@ -56,7 +56,7 @@ public class PlayController {
     @GetMapping("/start")
     public String startFromQr(@PathVariable String slug, HttpServletRequest request, HttpServletResponse response) {
         String rawToken = devices.ensureToken(request, response);
-        plays.startOrResume(slug, devices.hash(rawToken));
+        plays.restart(slug, devices.hash(rawToken));
         return "redirect:/play/" + slug + "/stage";
     }
 
