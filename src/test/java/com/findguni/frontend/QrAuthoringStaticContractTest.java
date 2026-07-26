@@ -38,7 +38,7 @@ class QrAuthoringStaticContractTest {
                 "data-scanner", "data-camera-start", "data-scanner-file",
                 "발견한 문제", "solvedStageKeys", "/stage/{key}"
         );
-        assertThat(stage).contains("data-hint-policy-status", "data-hint-wait-seconds", "hintAvailability");
+        assertThat(stage).doesNotContain("data-hint-policy-status", "data-hint-wait-seconds", "hintAvailability");
         assertThat(stage).contains(
                 "class=\"combination-lock\"", "combination-lock__shackle",
                 "data-wheel-prev", "data-wheel-next", "class=\"door-keypad\"",
@@ -56,6 +56,7 @@ class QrAuthoringStaticContractTest {
         );
         assertThat(appJs).contains(
                 "function initStageWorkspaces()", "panel.open = panel.dataset.stageId === stageId",
+                "function initStageCreateEditor()", "function initItemEditors()",
                 "function initPrintButtons()", "window.print()"
         );
         assertThat(appJs).doesNotContain(".innerHTML", "insertAdjacentHTML", "document.write");

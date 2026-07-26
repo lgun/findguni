@@ -266,7 +266,10 @@
                 <div class="card builder-section">
                     <div class="builder-section__head">
                         <div><h2 th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '선형 문제 순서' : 'QR 문제 보드'}">QR 문제 보드</h2><p th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '위에서 아래 순서대로 진행됩니다. 문제 카드는 한 번에 하나만 열립니다.' : '문제마다 QR을 인쇄해 원하는 장소에 배치하세요. 플레이어는 순서 없이 발견하고 해결합니다.'}">문제마다 QR을 배치하세요.</p></div>
-                        <span class="badge" th:text="|${stages != null ? #lists.size(stages) : 0}개|">0개</span>
+                        <div class="button-row">
+                            <span class="badge" th:text="|${stages != null ? #lists.size(stages) : 0}개|">0개</span>
+                            <button class="btn btn--small" type="button" data-stage-create-jump>새 문제 추가</button>
+                        </div>
                     </div>
                     <div class="empty-state" th:if="${stages == null or #lists.isEmpty(stages)}">
                         <div class="empty-state__icon" aria-hidden="true">▣</div>
@@ -471,7 +474,7 @@
                         </details>
                         </div>
 
-                    <details class="card stage-quick-create">
+                    <details class="card stage-quick-create" id="stage-create-editor" data-stage-create-editor>
                         <summary class="stage-card__summary">
                             <span class="stage-card__number" aria-hidden="true">＋</span>
                             <span class="stage-card__title"><strong>새 문제 추가</strong><span>제목과 퍼즐 유형만 고르면 바로 생성됩니다.</span></span>
@@ -544,7 +547,8 @@
                         <div class="empty-state__icon" aria-hidden="true">◇</div><h3>첫 QR 단서를 만들어보세요</h3><p>플레이어가 QR을 스캔하면 사진과 설명이 단서장에 기록됩니다.</p>
                     </div>
                     <div class="stack" th:unless="${items == null or #lists.isEmpty(items)}">
-                        <details class="card item-editor" th:each="item : ${items}">
+                        <details class="card item-editor" th:each="item : ${items}" th:id="|item-editor-${item.id}|"
+                                 th:attr="data-item-id=${item.id}" th:open="${selectedItemId != null and item.id == selectedItemId}">
                             <summary class="item-editor__summary">
                                 <span class="item-thumb item-thumb--small"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" alt=""><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></span>
                                 <span><strong th:text="${item.name}">아이템 이름</strong><small th:text="${item.itemType != null ? item.itemType.displayName : '커스텀'}">아이템 유형</small></span>

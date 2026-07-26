@@ -161,11 +161,13 @@ public class MakerController {
     @GetMapping("/games/{id}/edit")
     public String editGame(@PathVariable Long id,
                            @RequestParam(name = "edit", required = false) Long selectedStageId,
+                           @RequestParam(name = "item", required = false) Long selectedItemId,
                            Authentication authentication, Model model) {
         UserAccount maker = accounts.current(authentication);
         EscapeGame game = authoring.ownedGame(id, maker);
         builderModel(model, game, maker);
         model.addAttribute("selectedStageId", selectedStageId);
+        model.addAttribute("selectedItemId", selectedItemId);
         return "maker/game-builder";
     }
 
@@ -425,12 +427,13 @@ public class MakerController {
             UserAccount maker = accounts.current(authentication);
             authoring.ownedGame(id, maker);
             String imageUrl = assets.storeItemImage(photo);
-            authoring.addItem(id, maker, resolveItemType(itemType, legacyType), name, description,
+            GameItem created = authoring.addItem(id, maker, resolveItemType(itemType, legacyType), name, description,
                     clueText, icon, qrEnabled, initiallyOwned, copyableText, imageUrl,
                     alternateRequiredItem, alternateScanText);
             redirect.addFlashAttribute("success", "아이템을 추가했습니다.");
+            return "redirect:/maker/games/" + id + "/edit?tab=items&item=" + created.getId();
         } catch (IllegalArgumentException | IllegalStateException e) { redirect.addFlashAttribute("error", e.getMessage()); }
-        return "redirect:/maker/games/" + id + "/edit";
+        return "redirect:/maker/games/" + id + "/edit?tab=items";
     }
 
     @PostMapping("/games/{gameId}/items/{itemId}")
@@ -458,7 +461,7 @@ public class MakerController {
                     alternateRequiredItem, alternateScanText);
             redirect.addFlashAttribute("success", "아이템을 저장했습니다.");
         } catch (IllegalArgumentException | IllegalStateException e) { redirect.addFlashAttribute("error", e.getMessage()); }
-        return "redirect:/maker/games/" + gameId + "/edit";
+        return "redirect:/maker/games/" + gameId + "/edit?tab=items&item=" + itemId;
     }
 
     @PostMapping({"/items/{itemId}/delete", "/games/{gameId}/items/{itemId}/delete"})
@@ -468,7 +471,7 @@ public class MakerController {
         Long targetGameId = gameId == null ? authoring.deleteItem(itemId, maker)
                 : authoring.deleteItem(gameId, itemId, maker);
         redirect.addFlashAttribute("success", "아이템을 삭제했습니다.");
-        return "redirect:/maker/games/" + targetGameId + "/edit";
+        return "redirect:/maker/games/" + targetGameId + "/edit?tab=items";
     }
 
     @PostMapping("/games/{id}/publish")

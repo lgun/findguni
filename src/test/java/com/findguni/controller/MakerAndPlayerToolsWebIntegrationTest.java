@@ -271,7 +271,8 @@ class MakerAndPlayerToolsWebIntegrationTest {
                         .param("icon", "📷")
                         .param("qrEnabled", "true"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/maker/games/" + game.getId() + "/edit"));
+                .andExpect(result -> assertThat(result.getResponse().getRedirectedUrl())
+                        .startsWith("/maker/games/" + game.getId() + "/edit?tab=items&item="));
 
         GameItem stored = authoring.items(game.getId(), owner).stream()
                 .filter(item -> item.getName().equals("Captured clue"))

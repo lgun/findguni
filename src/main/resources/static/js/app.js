@@ -300,6 +300,70 @@
         });
     }
 
+    function initStageCreateEditor() {
+        var editor = document.querySelector('[data-stage-create-editor]');
+        if (!editor) return;
+        var title = editor.querySelector('#new-stage-title');
+
+        function openEditor(updateAddress, smooth) {
+            editor.open = true;
+            if (updateAddress && window.history.replaceState) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', 'stages');
+                url.searchParams.set('create', 'stage');
+                url.searchParams.delete('edit');
+                url.hash = 'stages';
+                window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+            }
+            window.requestAnimationFrame(function () {
+                editor.scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
+                if (title) window.setTimeout(function () { title.focus({ preventScroll: true }); }, smooth ? 350 : 0);
+            });
+        }
+
+        document.querySelectorAll('[data-stage-create-jump]').forEach(function (button) {
+            button.addEventListener('click', function () { openEditor(true, true); });
+        });
+        editor.addEventListener('toggle', function () {
+            if (!editor.open || !window.history.replaceState) return;
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', 'stages');
+            url.searchParams.set('create', 'stage');
+            url.searchParams.delete('edit');
+            url.hash = 'stages';
+            window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+        });
+        if (new URLSearchParams(window.location.search).get('create') === 'stage') openEditor(false, false);
+    }
+
+    function initItemEditors() {
+        var editors = Array.prototype.slice.call(document.querySelectorAll('[data-item-id]'));
+        if (!editors.length) return;
+
+        function select(editor, updateAddress, scroll) {
+            editors.forEach(function (candidate) { candidate.open = candidate === editor; });
+            if (updateAddress && window.history.replaceState) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('tab', 'items');
+                url.searchParams.set('item', editor.dataset.itemId);
+                url.hash = 'items';
+                window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+            }
+            if (scroll) window.requestAnimationFrame(function () {
+                editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            });
+        }
+
+        editors.forEach(function (editor) {
+            editor.addEventListener('toggle', function () {
+                if (editor.open) select(editor, true, false);
+            });
+        });
+        var requested = new URLSearchParams(window.location.search).get('item');
+        var selected = editors.find(function (editor) { return editor.dataset.itemId === requested; });
+        if (selected) select(selected, false, true);
+    }
+
     function initOptionRouting() {
         document.querySelectorAll('[data-option-routing]').forEach(function (editor) {
             var source = editor.querySelector('[data-option-source]');
@@ -781,6 +845,8 @@
         initPasswordToggles();
         initBuilderTabs();
         initStageWorkspaces();
+        initStageCreateEditor();
+        initItemEditors();
         initThemePreview();
         initCoverPreview();
         initCopyButtons();
