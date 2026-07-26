@@ -403,10 +403,21 @@ public class PlayService {
         }
         LinkedHashSet<String> solved = stageKeys(session.getSolvedStagesJson());
         if (solved.contains(stage.stableKey())) {
-            session.setActiveStageKey(null);
-            boolean completed = solved.size() >= snapshot.stages().size();
-            if (completed) session.complete();
-            return new SolveResult(true, completed, null);
+            LinkedHashSet<String> inventory = inventoryKeys(session);
+            String selectedRoute = optionRoute(stage, submittedAnswer, inventory);
+            String targetStageKey = selectedRoute == null ? stage.nextStageKey() : selectedRoute;
+            ReleaseSnapshot.StageSnapshot targetStage = snapshot.stages().stream()
+                    .filter(candidate -> Objects.equals(candidate.stableKey(), targetStageKey))
+                    .findFirst().orElse(null);
+            if (targetStage == null) {
+                session.setActiveStageKey(null);
+            } else {
+                LinkedHashSet<String> newlyDiscovered = stageKeys(session.getDiscoveredStagesJson());
+                newlyDiscovered.add(targetStage.stableKey());
+                session.setDiscoveredStagesJson(writeKeys(newlyDiscovered));
+                session.setActiveStageKey(targetStage.stableKey());
+            }
+            return new SolveResult(true, false, null);
         }
         LinkedHashSet<String> inventory = inventoryKeys(session);
         if (!inventory.containsAll(requiredItemKeys(stage))) {
