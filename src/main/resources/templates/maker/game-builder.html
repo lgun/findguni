@@ -304,7 +304,11 @@
                             </summary>
                             <header class="stage-editor-context">
                                 <div><p class="eyebrow">선택한 문제</p><h3 th:text="${stage.title}">문제 제목</h3></div>
-                                <span class="badge" th:text="${stage.puzzleType.displayName}">문제 유형</span>
+                                <div class="button-row">
+                                    <span class="badge" th:text="${stage.puzzleType.displayName}">문제 유형</span>
+                                    <button class="btn btn--secondary btn--small" type="submit" name="preview" value="true"
+                                            formtarget="_blank" th:attr="form=|stage-edit-form-${stage.id}|">이 문제 미리보기</button>
+                                </div>
                             </header>
                             <form class="stage-card__form form-grid" th:id="|stage-edit-form-${stage.id}|" th:action="@{/maker/games/{gameId}/stages/{stageId}(gameId=${game.id},stageId=${stage.id})}" method="post" enctype="multipart/form-data">
                                 <section class="stage-qr-setting" th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}">
@@ -465,8 +469,6 @@
                             </form>
                             <div class="stage-actions">
                                 <button class="btn btn--small" type="submit" th:attr="form=|stage-edit-form-${stage.id}|">문제 저장</button>
-                                <button class="btn btn--secondary btn--small" type="submit" name="preview" value="true" formtarget="_blank"
-                                        th:attr="form=|stage-edit-form-${stage.id}|">저장 후 미리보기</button>
                                 <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="up"><button class="btn btn--secondary btn--small" type="submit" aria-label="위로 이동">↑ 위로</button></form>
                                 <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="down"><button class="btn btn--secondary btn--small" type="submit" aria-label="아래로 이동">↓ 아래로</button></form>
                                 <form th:action="@{/maker/games/{gameId}/stages/{stageId}/delete(gameId=${game.id},stageId=${stage.id})}" method="post"><button class="btn btn--quiet btn--small" type="submit" data-confirm="이 문제를 삭제할까요? 연결된 진행 흐름을 다시 확인해야 합니다.">삭제</button></form>
