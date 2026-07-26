@@ -424,6 +424,7 @@
                                 <div class="field" data-types="MULTIPLE_CHOICE">
                                     <label class="field__label" th:for="|stage-options-${stage.id}|">선택지</label>
                                     <textarea class="textarea" th:id="|stage-options-${stage.id}|" name="optionsText" th:text="${stage.optionsText}" placeholder="선택지를 한 줄에 하나씩 입력하세요."></textarea>
+                                    <span class="field__hint">한 줄에 하나씩 입력하고, 위의 정답 칸에는 정답 선택지의 문구를 정확히 입력하세요.</span>
                                 </div>
                                 <div class="form-grid form-grid--2">
                                     <div class="field">
@@ -468,9 +469,24 @@
                                 <div class="field"><label class="field__label" for="new-stage-title">제목</label><input class="input" id="new-stage-title" name="title" maxlength="80" required placeholder="예: 잠긴 서재"></div>
                                 <div class="field">
                                     <label class="field__label" for="new-stage-type">퍼즐 유형</label>
-                                    <select class="select" id="new-stage-type" name="puzzleType" required>
+                                    <select class="select" id="new-stage-type" name="puzzleType" data-puzzle-type required>
                                         <option value="STORY">스토리</option><option value="NUMBER_LOCK">숫자 휠</option><option value="KEYPAD">숫자 키패드</option><option value="ALPHABET_LOCK">알파벳 휠</option><option value="DIRECTION_LOCK">방향 자물쇠</option><option value="COLOR_LOCK">색상 순서</option><option value="MULTIPLE_CHOICE">객관식</option><option value="TEXT_ANSWER">단답형</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div class="form-grid" data-types="MULTIPLE_CHOICE">
+                                <div class="field">
+                                    <label class="field__label" for="new-stage-question">객관식 문제 내용</label>
+                                    <textarea class="textarea" id="new-stage-question" name="story" maxlength="20000" placeholder="플레이어에게 보여 줄 질문을 입력하세요."></textarea>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" for="new-stage-options">선택지</label>
+                                    <textarea class="textarea" id="new-stage-options" name="optionsText" maxlength="2000" placeholder="선택지를 한 줄에 하나씩 입력하세요.&#10;예: 빨강&#10;파랑&#10;초록"></textarea>
+                                    <span class="field__hint">입력한 줄마다 플레이 화면에 하나의 선택 버튼이 만들어집니다.</span>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" for="new-stage-answer">정답 선택지</label>
+                                    <input class="input" id="new-stage-answer" name="draftAnswer" maxlength="500" autocomplete="off" placeholder="위 선택지 중 정답 문구를 정확히 입력하세요.">
                                 </div>
                             </div>
                             <label class="tool-toggle" th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}"><span><strong>문제 QR 발급</strong><small>저장 즉시 다운로드할 수 있습니다.</small></span><input type="checkbox" name="qrEnabled" value="true" checked data-toggle-checkbox><input type="hidden" name="qrEnabled" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
