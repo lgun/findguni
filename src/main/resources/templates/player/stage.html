@@ -42,10 +42,15 @@
             <h1 th:text="${stage.title}">스테이지 제목</h1>
             <p class="stage-story__text" data-story-text th:attr="aria-label=${stage.story}" th:text="${stage.story}">이야기 내용</p>
             <div class="instruction" th:if="${stage.instruction != null and !#strings.isEmpty(stage.instruction)}" th:text="${stage.instruction}">문제 안내</div>
+            <form th:if="${stage.puzzleType.name() == 'STORY'}" th:action="@{/play/{slug}/solve(slug=${game.slug})}" method="post">
+                <input type="hidden" name="answer" value="continue">
+                <button class="btn btn--block" style="margin-top:1rem" type="submit"
+                        th:text="${stage.consumeRequiredItems and requiredItems != null and #lists.size(requiredItems) > 1 ? '아이템 조합하기' : (stage.consumeRequiredItems ? '아이템 건네기' : '다음 장면으로')}">다음 장면으로</button>
+            </form>
         </div>
     </article>
 
-    <section class="card puzzle-shell" data-puzzle tabindex="-1" th:attr="data-lock-length=${stage.lockLength != null ? stage.lockLength : 4}" aria-labelledby="puzzle-title">
+    <section class="card puzzle-shell" data-puzzle tabindex="-1" th:unless="${stage.puzzleType.name() == 'STORY'}" th:attr="data-lock-length=${stage.lockLength != null ? stage.lockLength : 4}" aria-labelledby="puzzle-title">
         <h2 class="puzzle-title" id="puzzle-title" th:text="${stage.puzzleType != null ? stage.puzzleType.displayName : '이야기'}">퍼즐</h2>
 
         <form th:action="@{/play/{slug}/solve(slug=${game.slug})}" method="post" class="stack">
@@ -65,11 +70,6 @@
                 </ul>
                 <p th:if="${stage.consumeRequiredItems}">완료하면 표시된 아이템은 가방에서 사용 처리됩니다.</p>
             </section>
-
-            <div th:if="${stage.puzzleType.name() == 'STORY'}">
-                <p class="muted" style="text-align:center">이야기를 모두 읽었다면 다음 장면으로 이동하세요.</p>
-                <input type="hidden" data-answer-source value="continue" aria-hidden="true">
-            </div>
 
             <div th:if="${stage.puzzleType.name() == 'NUMBER_LOCK'}">
                 <div class="combination-lock" aria-label="숫자 다이얼 자물쇠">
@@ -159,17 +159,8 @@
             </div>
 
             <p class="puzzle-status" data-puzzle-status aria-live="polite"></p>
-            <button class="btn btn--block" th:classappend="${stage.puzzleType.name() != 'STORY' ? 'lock-release' : ''}" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}"><span class="lock-release__bolt" th:if="${stage.puzzleType.name() != 'STORY'}" aria-hidden="true"></span><span th:text="${stage.puzzleType.name() == 'STORY' ? (stage.consumeRequiredItems and requiredItems != null and #lists.size(requiredItems) > 1 ? '아이템 조합하기' : (stage.consumeRequiredItems ? '아이템 건네기' : '다음 장면으로')) : '자물쇠 열기'}">자물쇠 열기</span></button>
+            <button class="btn btn--block lock-release" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}"><span class="lock-release__bolt" aria-hidden="true"></span><span>자물쇠 열기</span></button>
         </form>
-    </section>
-
-    <section class="hint-card" th:if="${hintRevealed}" aria-labelledby="hint-title">
-        <h2 id="hint-title" th:text="${game.slug == 'dubu-housewarming' ? '살짝 힌트' : '힌트'}">힌트</h2><p th:text="${revealedHint != null ? revealedHint : stage.hint}">힌트 내용</p><small class="muted" th:text="${hintAvailability.statusText}">이미 확인한 힌트입니다.</small>
-    </section>
-
-    <section class="card hint-prompt" th:unless="${hintRevealed}" aria-label="힌트">
-        <div><strong th:text="${game.slug == 'dubu-housewarming' ? '조금 막혔나요?' : '막혔나요?'}">막혔나요?</strong><span class="muted" data-hint-policy-status th:text="${hintAvailability.statusText}">힌트 사용 정책</span></div>
-        <form th:action="@{/play/{slug}/hint(slug=${game.slug})}" method="post"><button class="btn btn--secondary btn--small" type="submit" th:disabled="${!hintAvailability.allowed}" th:attr="data-hint-wait-seconds=${hintAvailability.retryAfterSeconds},data-hint-ready-label=${game.slug == 'dubu-housewarming' ? '힌트 하나 보기' : '힌트 보기'}" th:text="${hintAvailability.retryAfterSeconds > 0 ? hintAvailability.retryAfterSeconds + '초 후 사용' : (game.slug == 'dubu-housewarming' ? '힌트 하나 보기' : '힌트 보기')}">힌트 보기</button></form>
     </section>
 </main>
 
