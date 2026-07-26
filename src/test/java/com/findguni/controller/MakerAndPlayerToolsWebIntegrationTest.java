@@ -220,7 +220,7 @@ class MakerAndPlayerToolsWebIntegrationTest {
                 printedPayloads.add(new MultiFormatReader().decode(bitmap,
                         java.util.Map.of(DecodeHintType.TRY_HARDER, true)).getText());
             }
-            assertThat(printedPayloads).hasSize(expectedQrCount).contains(qrCodes.playUrl(game));
+            assertThat(printedPayloads).hasSize(expectedQrCount).contains(qrCodes.gameStartUrl(game));
         }
 
         byte[] zipBytes = mvc.perform(get("/maker/games/{id}/qr-kit/qr-images.zip", game.getId())

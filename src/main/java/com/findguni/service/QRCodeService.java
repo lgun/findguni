@@ -40,6 +40,10 @@ public class QRCodeService {
         return publicBaseUrl + "/play/" + game.getSlug();
     }
 
+    public String gameStartUrl(EscapeGame game) {
+        return playUrl(game) + "/start";
+    }
+
     public String itemClueUrl(EscapeGame game, GameItem item) {
         return playUrl(game) + "/clue/" + item.getStableKey();
     }
@@ -49,7 +53,7 @@ public class QRCodeService {
     }
 
     public byte[] generateFor(EscapeGame game) {
-        return generate(playUrl(game));
+        return generate(gameStartUrl(game));
     }
 
     public byte[] generateForItem(EscapeGame game, GameItem item) {

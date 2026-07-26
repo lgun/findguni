@@ -53,6 +53,13 @@ public class PlayController {
         return "redirect:/play/" + slug + "/stage";
     }
 
+    @GetMapping("/start")
+    public String startFromQr(@PathVariable String slug, HttpServletRequest request, HttpServletResponse response) {
+        String rawToken = devices.ensureToken(request, response);
+        plays.startOrResume(slug, devices.hash(rawToken));
+        return "redirect:/play/" + slug + "/stage";
+    }
+
     @GetMapping("/stage")
     public String stage(@PathVariable String slug, HttpServletRequest request, Model model) {
         String rawToken = devices.token(request).orElse(null);
