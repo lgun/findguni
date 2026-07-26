@@ -168,7 +168,6 @@
     <button class="tool-dock__button" type="button" data-tool-open="inventory" aria-controls="tool-drawer"><span aria-hidden="true">🎒</span><span>가방</span></button>
     <button class="tool-dock__button" type="button" data-tool-open="clues" aria-controls="tool-drawer" th:if="${game.allowCluebook}"><span aria-hidden="true">🧩</span><span>단서장</span></button>
     <button class="tool-dock__button" type="button" data-tool-open="notes" aria-controls="tool-drawer" th:if="${game.allowNotebook}"><span aria-hidden="true">📝</span><span>메모</span></button>
-    <button class="tool-dock__button" type="button" data-tool-open="sound" aria-controls="tool-drawer"><span aria-hidden="true">♫</span><span>사운드</span></button>
     <button class="tool-dock__button tool-dock__button--accent" type="button" data-tool-open="scanner" data-scanner-open aria-controls="tool-drawer" th:if="${game.allowQrScanner}"><span aria-hidden="true">▣</span><span>QR 스캔</span></button>
 </nav>
 

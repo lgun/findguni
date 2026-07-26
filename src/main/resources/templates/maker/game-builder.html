@@ -475,7 +475,18 @@
                             </div>
                             <label class="tool-toggle" th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}"><span><strong>문제 QR 발급</strong><small>저장 즉시 다운로드할 수 있습니다.</small></span><input type="checkbox" name="qrEnabled" value="true" checked data-toggle-checkbox><input type="hidden" name="qrEnabled" value="false" data-toggle-fallback><span class="toggle-ui" aria-hidden="true"></span></label>
                             <input type="hidden" name="entryMode" value="QR">
-                            <div class="quick-create-note"><span aria-hidden="true">⚡</span><p><strong>빠른 생성</strong> 제목과 유형만으로 먼저 추가합니다. 이야기, 정답, 사진, 효과음은 생성 후 선택한 문제 카드에서 편집하세요.</p></div>
+                            <div class="item-media-editor">
+                                <div class="item-thumb item-thumb--preview">
+                                    <img id="new-stage-photo-preview" hidden alt="새 장면 사진 미리보기">
+                                    <span aria-hidden="true">📷</span>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" for="new-stage-photo">장면 사진 촬영 또는 선택</label>
+                                    <input class="file-input" id="new-stage-photo" type="file" name="scenePhoto" accept="image/*" data-photo-input="new-stage-photo-preview">
+                                    <span class="field__hint">사진은 플레이 화면의 장면 배경으로 바로 표시됩니다.</span>
+                                </div>
+                            </div>
+                            <div class="quick-create-note"><span aria-hidden="true">⚡</span><p><strong>빠른 생성</strong> 제목, 유형, 사진으로 먼저 추가합니다. 이야기, 정답, 효과음은 생성 후 선택한 문제 카드에서 편집하세요.</p></div>
                             <button class="btn" type="submit">문제 만들고 편집하기</button>
                         </form>
                     </details>
