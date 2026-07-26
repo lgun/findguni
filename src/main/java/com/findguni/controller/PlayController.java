@@ -124,8 +124,6 @@ public class PlayController {
         String answer = firstAnswer(fields);
         PlayService.SolveResult result = plays.solve(slug, devices.hash(rawToken), answer);
         if (!result.success()) redirect.addFlashAttribute("error", result.message());
-        else redirect.addFlashAttribute("success",
-                result.message() == null || result.message().isBlank() ? "The answer is accepted." : result.message());
         return "redirect:/play/" + slug + "/stage";
     }
 
@@ -193,10 +191,7 @@ public class PlayController {
                         result.found(), result.accepted(), result.success(), result.message(), "STAGE", redirectUrl, null));
             }
             PlayService.ClueScanResult clue = plays.scanClue(slug, devices.hash(rawToken), target.stableKey());
-            String redirectUrl = "/play/" + slug + "/clue/" + target.stableKey();
-            return ResponseEntity.ok(new PlayService.QrScanResult(
-                    clue.found(), clue.accepted(), clue.success(), clue.message(), "CLUE", redirectUrl,
-                    clue.getItem() == null ? null : clue.getItem().stableKey()));
+            return ResponseEntity.ok(PlayService.QrScanResult.clue(clue));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new PlayService.QrScanResult(
                     false, false, false, e.getMessage(), null, null, null));

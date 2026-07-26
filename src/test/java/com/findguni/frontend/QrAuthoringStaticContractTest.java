@@ -25,6 +25,7 @@ class QrAuthoringStaticContractTest {
                 "class=\"advanced-editor\"", "class=\"quick-create-note\"",
                 "/stages/{stageId}/qr", "name=\"qrEnabled\"", "name=\"entryMode\"",
                 "name=\"nextStageKey\"",
+                "data-no-required-item", "필요 아이템 없음",
                 "QR 단서·아이템", "name=\"qrEnabled\" value=\"true\" checked",
                 "name=\"initiallyOwned\"", "name=\"copyableText\"",
                 "name=\"unlimitedHints\"", "name=\"hintLimit\"", "name=\"hintCooldownSeconds\""
@@ -57,6 +58,7 @@ class QrAuthoringStaticContractTest {
         assertThat(appJs).contains(
                 "function initStageWorkspaces()", "panel.open = panel.dataset.stageId === stageId",
                 "function initStageCreateEditor()", "function initItemEditors()",
+                "function initRequiredItemSelectors()",
                 "function initPrintButtons()", "window.print()"
         );
         assertThat(appJs).doesNotContain(".innerHTML", "insertAdjacentHTML", "document.write");

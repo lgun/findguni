@@ -38,14 +38,20 @@
             <span class="cinematic-scene__shade" aria-hidden="true"></span>
         </div>
         <div class="cinematic-scene__content">
-            <p class="stage-kicker" th:text="|Stage ${stageNumber != null ? stageNumber : 1} / ${stageCount != null ? stageCount : '?'}|">Stage 1</p>
             <h1 th:text="${stage.title}">스테이지 제목</h1>
             <p class="stage-story__text" data-story-text th:attr="aria-label=${stage.story}" th:text="${stage.story}">이야기 내용</p>
             <div class="instruction" th:if="${stage.instruction != null and !#strings.isEmpty(stage.instruction)}" th:text="${stage.instruction}">문제 안내</div>
             <form th:if="${stage.puzzleType.name() == 'STORY'}" th:action="@{/play/{slug}/solve(slug=${game.slug})}" method="post">
                 <input type="hidden" name="answer" value="continue">
                 <button class="btn btn--block" style="margin-top:1rem" type="submit"
-                        th:text="${stage.consumeRequiredItems and requiredItems != null and #lists.size(requiredItems) > 1 ? '아이템 조합하기' : (stage.consumeRequiredItems ? '아이템 건네기' : '다음 장면으로')}">다음 장면으로</button>
+                        th:text="${stage.consumeRequiredItems and requiredItems != null and #lists.size(requiredItems) > 1
+                            ? '아이템 조합하기'
+                            : (stage.consumeRequiredItems
+                                ? '아이템 건네기'
+                                : (game.flowMode != null and game.flowMode.name() == 'QR_EXPLORATION'
+                                    and (stage.nextStageKey == null or #strings.isEmpty(stage.nextStageKey))
+                                    ? '이어서 탐색'
+                                    : '다음 장면으로'))}">이어서 탐색</button>
             </form>
         </div>
     </article>
@@ -148,18 +154,19 @@
                 <button class="choice-key" type="submit" data-choice th:each="option : ${stage.options}" th:attr="data-choice=${option}" th:text="${option}">선택지</button>
             </div>
 
-            <div class="answer-row" th:if="${stage.puzzleType.name() == 'TEXT_ANSWER'}">
-                <div class="access-lock">
-                    <i class="lock-screw lock-screw--tl" aria-hidden="true"></i><i class="lock-screw lock-screw--tr" aria-hidden="true"></i><i class="lock-screw lock-screw--bl" aria-hidden="true"></i><i class="lock-screw lock-screw--br" aria-hidden="true"></i>
-                    <div class="access-lock__header"><span class="access-lock__sensor" aria-hidden="true"></span><div><strong>ACCESS CODE</strong><small>문자·숫자 비밀번호</small></div></div>
-                    <label class="access-lock__label" for="text-answer">비밀번호</label>
-                    <div class="access-lock__screen"><input id="text-answer" data-answer-source maxlength="1000" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="입력하거나 붙여넣기" required><button type="button" data-paste-answer>붙여넣기</button></div>
-                    <p class="access-lock__help">긴 비밀번호는 가방에서 복사해 그대로 붙여넣을 수 있습니다.</p>
-                </div>
+            <div class="field" th:if="${stage.puzzleType.name() == 'TEXT_ANSWER'}">
+                <label class="field__label" for="text-answer">정답</label>
+                <input class="input" id="text-answer" data-answer-source maxlength="1000"
+                       autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                       placeholder="정답을 입력하세요" required>
             </div>
 
             <p class="puzzle-status" data-puzzle-status aria-live="polite"></p>
-            <button class="btn btn--block lock-release" type="submit" th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE'}"><span class="lock-release__bolt" aria-hidden="true"></span><span>자물쇠 열기</span></button>
+            <button class="btn btn--block" type="submit" th:if="${stage.puzzleType.name() == 'TEXT_ANSWER'}">정답 제출</button>
+            <button class="btn btn--block lock-release" type="submit"
+                    th:unless="${stage.puzzleType.name() == 'MULTIPLE_CHOICE' or stage.puzzleType.name() == 'TEXT_ANSWER'}">
+                <span class="lock-release__bolt" aria-hidden="true"></span><span>자물쇠 열기</span>
+            </button>
         </form>
     </section>
 </main>
@@ -188,9 +195,9 @@
 
     <div class="tool-drawer__content">
         <section class="tool-panel" id="tool-panel-inventory" role="tabpanel" aria-labelledby="tool-tab-inventory" data-tool-panel="inventory">
-            <div class="empty-state" th:if="${inventory == null or #lists.isEmpty(inventory)}"><div class="empty-state__icon" aria-hidden="true">🎒</div><h3>가방이 비어 있어요</h3><p>스테이지를 해결하면 발견한 아이템이 여기에 모입니다.</p></div>
-            <ul class="tool-card-list" th:unless="${inventory == null or #lists.isEmpty(inventory)}">
-                <li class="tool-item-card" th:each="item : ${inventory}">
+            <div class="empty-state" data-inventory-empty th:hidden="${inventory != null and !#lists.isEmpty(inventory)}"><div class="empty-state__icon" aria-hidden="true">🎒</div><h3>가방이 비어 있어요</h3><p>스테이지를 해결하면 발견한 아이템이 여기에 모입니다.</p></div>
+            <ul class="tool-card-list" data-inventory-list th:hidden="${inventory == null or #lists.isEmpty(inventory)}">
+                <li class="tool-item-card" th:each="item : ${inventory}" th:attr="data-inventory-item=${item.stableKey}">
                     <div class="tool-item-card__media"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" th:alt="|${item.name} 이미지|"><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}" aria-hidden="true">◇</span></div>
                     <div><strong th:text="${item.name}">아이템</strong><p th:text="${item.clueText != null and !#strings.isEmpty(item.clueText) ? item.clueText : item.description}">아이템 설명 또는 단서</p><a class="item-image-link" th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:href="${item.imageUrl}" target="_blank" rel="noopener">이미지 크게 보기</a><div class="copyable-item" th:if="${item.copyableText != null and !#strings.isEmpty(item.copyableText)}"><code th:text="${item.copyableText}">copy me</code><button class="btn btn--secondary btn--small" type="button" data-copy-text th:attr="data-copy-value=${item.copyableText}">복사하기</button><span data-copy-status role="status" aria-live="polite"></span></div></div>
                 </li>

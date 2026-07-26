@@ -22,6 +22,10 @@ public class GameItem {
     @Column(name = "stable_key", nullable = false, length = 36)
     private String stableKey;
 
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int position;
+
     @Column(nullable = false, length = 80)
     private String name;
 
@@ -78,6 +82,8 @@ public class GameItem {
     public Long getId() { return id; }
     public EscapeGame getGame() { return game; }
     public String getStableKey() { return stableKey; }
+    public int getPosition() { return position; }
+    public void setPosition(int position) { this.position = position; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }

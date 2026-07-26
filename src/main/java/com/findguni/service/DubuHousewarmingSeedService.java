@@ -30,37 +30,12 @@ public class DubuHousewarmingSeedService {
     @Transactional
     public EscapeGame ensureDubuHousewarming() {
         UserAccount maker = accounts.ensureDemoSeedAccount("demo@findguni.local", "test", "Findguni 메이커");
-        return games.findBySlug(SLUG)
-                .map(game -> refreshOldSeedIfNeeded(game, maker))
-                .orElseGet(() -> create(maker));
+        return games.findBySlug(SLUG).orElseGet(() -> create(maker));
     }
 
     private EscapeGame create(UserAccount maker) {
         EscapeGame game = authoring.create(maker, "연두부, 두부네 집들이 가는 중!", SLUG,
                 "BLANK", GameTheme.RETRO, Difficulty.NORMAL, 60, GameFlowMode.QR_EXPLORATION);
-        return configure(game, maker);
-    }
-
-    private EscapeGame refreshOldSeedIfNeeded(EscapeGame game, UserAccount maker) {
-        if (!game.getOwner().getId().equals(maker.getId())) return game;
-        List<GameStage> stages = authoring.stages(game.getId(), maker);
-        boolean conditionalGuard = authoring.items(game.getId(), maker).stream()
-                .anyMatch(item -> "밤톨 경비원의 체포 딱지".equals(item.getName())
-                        && item.getAlternateRequiredItem() != null);
-        boolean currentRevision = stages.stream().anyMatch(stage -> CURRENT_REVISION_STAGE.equals(stage.getTitle()))
-                && stages.stream().anyMatch(stage -> "조합소: 두부 선물 만들기".equals(stage.getTitle()))
-                && stages.stream().anyMatch(stage -> "자택경비원 등 뒤".equals(stage.getTitle()))
-                && conditionalGuard;
-        boolean smoothHints = game.getDifficulty() == Difficulty.NORMAL
-                && game.isUnlimitedHints() && game.getHintCooldownSeconds() == 0;
-        if (currentRevision && smoothHints) return game;
-
-        for (int index = stages.size() - 1; index >= 1; index--) {
-            authoring.deleteStage(game.getId(), stages.get(index).getId(), maker);
-        }
-        for (GameItem item : authoring.items(game.getId(), maker)) {
-            authoring.deleteItem(game.getId(), item.getId(), maker);
-        }
         return configure(game, maker);
     }
 

@@ -49,9 +49,54 @@
             if (contentType.indexOf('application/json') >= 0) {
                 var data = await response.json();
                 var accepted = typeof data.accepted === 'boolean' ? data.accepted : data.success !== false;
-                return { success: accepted, message: data.message || '', found: data.found !== false, redirectUrl: data.redirectUrl || null };
+                return {
+                    success: accepted,
+                    message: data.message || '',
+                    found: data.found !== false,
+                    redirectUrl: data.redirectUrl || null,
+                    targetType: data.targetType || null,
+                    item: data.item || null
+                };
             }
             return { success: response.ok, message: '' };
+        }
+
+        function showAcquiredItem(item) {
+            if (!item || !item.stableKey) return;
+            document.querySelectorAll('[data-inventory-list]').forEach(function (list) {
+                if (list.querySelector('[data-inventory-item="' + CSS.escape(item.stableKey) + '"]')) return;
+                var card = document.createElement('li');
+                card.className = 'tool-item-card';
+                card.dataset.inventoryItem = item.stableKey;
+                var media = document.createElement('div');
+                media.className = 'tool-item-card__media';
+                if (item.imageUrl) {
+                    var image = document.createElement('img');
+                    image.src = item.imageUrl;
+                    image.alt = (item.name || '아이템') + ' 이미지';
+                    media.appendChild(image);
+                } else {
+                    var emoji = document.createElement('span');
+                    emoji.textContent = item.emoji || '◇';
+                    media.appendChild(emoji);
+                }
+                var content = document.createElement('div');
+                var name = document.createElement('strong');
+                name.textContent = item.name || '새 아이템';
+                var description = document.createElement('p');
+                description.textContent = item.clueText || item.description || '';
+                content.appendChild(name);
+                content.appendChild(description);
+                card.appendChild(media);
+                card.appendChild(content);
+                list.appendChild(card);
+                list.hidden = false;
+            });
+            document.querySelectorAll('[data-inventory-empty]').forEach(function (empty) { empty.hidden = true; });
+            document.querySelectorAll('[data-inventory-count]').forEach(function (count) {
+                var list = document.querySelector('[data-inventory-list]');
+                count.textContent = (list ? list.querySelectorAll('[data-inventory-item]').length : 0) + '개';
+            });
         }
 
         async function submit(formData) {
@@ -65,8 +110,10 @@
                 var result = await responseMessage(response);
                 stop();
                 message(result.message || '단서를 확인했습니다. 잠시 뒤 페이지로 이동합니다.', 'success');
+                if (result.targetType === 'CLUE' && result.item) showAcquiredItem(result.item);
                 if (result.redirectUrl) {
-                    window.location.assign(result.redirectUrl);
+                    window.setTimeout(function () { window.location.assign(result.redirectUrl); },
+                        result.targetType === 'CLUE' && result.item ? 450 : 0);
                     return;
                 }
                 if (!response.ok || !result.success) {

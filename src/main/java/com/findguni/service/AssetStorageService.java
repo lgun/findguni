@@ -19,6 +19,9 @@ public class AssetStorageService {
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
     private final Path uploadRoot;
 
+    @Value("${findguni.public-base-url:http://localhost:8080}")
+    private String publicBaseUrl;
+
     public AssetStorageService(@Value("${findguni.upload-dir:./uploads}") String uploadDir) {
         this.uploadRoot = Path.of(uploadDir).toAbsolutePath().normalize();
     }
@@ -40,7 +43,9 @@ public class AssetStorageService {
             if (!ImageIO.write(resized, extension, destination.toFile())) {
                 throw new IOException("지원되는 이미지 writer가 없습니다.");
             }
-            return "/uploads/" + destination.getFileName();
+            String uploadPath = "/uploads/" + destination.getFileName();
+            String normalizedBaseUrl = Objects.toString(publicBaseUrl, "").trim().replaceAll("/+$", "");
+            return normalizedBaseUrl.isBlank() ? uploadPath : normalizedBaseUrl + uploadPath;
         } catch (IOException e) {
             try { Files.deleteIfExists(destination); } catch (IOException ignored) {}
             throw new IllegalStateException("이미지를 저장하지 못했습니다.", e);

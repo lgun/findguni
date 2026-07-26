@@ -1,8 +1,11 @@
 package com.findguni.service;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.findguni.model.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public record ReleaseSnapshot(
         Long gameId,
@@ -81,7 +84,7 @@ public record ReleaseSnapshot(
             PuzzleType puzzleType,
             String answerDigest,
             List<String> options,
-            Map<String, String> optionRoutes,
+            Map<String, OptionRoute> optionRoutes,
             int lockLength,
             String requiredItem,
             List<String> requiredItems,
@@ -108,7 +111,7 @@ public record ReleaseSnapshot(
         public PuzzleType getPuzzleType() { return puzzleType; }
         public String getAnswerDigest() { return answerDigest; }
         public List<String> getOptions() { return options; }
-        public Map<String, String> getOptionRoutes() { return optionRoutes == null ? Map.of() : optionRoutes; }
+        public Map<String, OptionRoute> getOptionRoutes() { return optionRoutes == null ? Map.of() : optionRoutes; }
         public int getLockLength() { return lockLength; }
         public String getRequiredItem() { return requiredItem; }
         public List<String> getRequiredItems() {
@@ -129,6 +132,60 @@ public record ReleaseSnapshot(
         public String getSfxLicenseUrl() { return sfxLicenseUrl; }
         public String getSfxSourceUrl() { return sfxSourceUrl; }
         public double getSfxVolume() { return sfxVolume; }
+    }
+
+    public static final class OptionRoute {
+        private final String requiredItemKey;
+        private final String ownedStageKey;
+        private final String missingStageKey;
+
+        public OptionRoute(String requiredItemKey, String ownedStageKey, String missingStageKey) {
+            this.requiredItemKey = blankToNull(requiredItemKey);
+            this.ownedStageKey = blankToNull(ownedStageKey);
+            this.missingStageKey = blankToNull(missingStageKey);
+        }
+
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        public static OptionRoute from(JsonNode node) {
+            if (node == null || node.isNull()) return new OptionRoute(null, null, null);
+            if (node.isTextual()) return new OptionRoute(null, node.asText(), null);
+            return new OptionRoute(text(node, "requiredItemKey"), text(node, "ownedStageKey"),
+                    text(node, "missingStageKey"));
+        }
+
+        public String getRequiredItemKey() { return requiredItemKey; }
+        public String getOwnedStageKey() { return ownedStageKey; }
+        public String getMissingStageKey() { return missingStageKey; }
+
+        public boolean conditional() { return requiredItemKey != null; }
+
+        public boolean complete() {
+            return conditional()
+                    ? ownedStageKey != null && missingStageKey != null
+                    : ownedStageKey != null;
+        }
+
+        public String resolve(Set<String> inventory) {
+            if (!conditional()) return ownedStageKey;
+            return inventory != null && inventory.contains(requiredItemKey) ? ownedStageKey : missingStageKey;
+        }
+
+        public List<String> targets() {
+            if (ownedStageKey == null) {
+                return missingStageKey == null ? List.of() : List.of(missingStageKey);
+            }
+            if (missingStageKey == null || ownedStageKey.equals(missingStageKey)) return List.of(ownedStageKey);
+            return List.of(ownedStageKey, missingStageKey);
+        }
+
+        private static String text(JsonNode node, String field) {
+            JsonNode value = node.get(field);
+            return value == null ? null : value.asText(null);
+        }
+
+        private static String blankToNull(String value) {
+            return value == null || value.isBlank() ? null : value.trim();
+        }
     }
 
     public record ItemSnapshot(String stableKey, String name, String description, String emoji,

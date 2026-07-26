@@ -62,7 +62,7 @@ public class PlayService {
     public PlaySession startOrResume(String slug, String deviceHash) {
         EscapeGame game = playableGame(slug);
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         Optional<PlaySession> active = sessions
                 .findFirstByDeviceTokenHashAndRelease_Game_IdAndStatusOrderByLastActivityAtDesc(
                         deviceHash, game.getId(), PlayStatus.ACTIVE);
@@ -153,7 +153,7 @@ public class PlayService {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = activeSessionOrRepair(activeSession(deviceHash, game.getId()), game, release, snapshot);
         if (flowMode(snapshot) == GameFlowMode.QR_EXPLORATION) {
             return solveExploration(session, snapshot, submittedAnswer);
@@ -172,15 +172,15 @@ public class PlayService {
             return new SolveResult(false, false, "Required items are missing for this stage.");
         }
         boolean success = !stage.puzzleType().requiresAnswer()
-                || hasOptionRoute(stage, submittedAnswer)
+                || hasOptionRoute(stage, submittedAnswer, inventory)
                 || answers.matches(stage.puzzleType(), submittedAnswer, stage.answerDigest());
         attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, success));
         if (!success) {
             session.recordFailedAttempt();
             return new SolveResult(false, false, "Wrong answer. Try again.");
         }
+        String selectedRoute = optionRoute(stage, submittedAnswer, inventory);
         applyItemExchange(session, stage, inventory);
-        String selectedRoute = optionRoute(stage, submittedAnswer);
         int routeIndex = stageIndex(snapshot, selectedRoute);
         if (routeIndex >= 0) {
             LinkedHashSet<String> routedSolved = new LinkedHashSet<>();
@@ -205,7 +205,7 @@ public class PlayService {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = activeSessionOrRepair(activeSession(deviceHash, game.getId()), game, release, snapshot);
         ReleaseSnapshot.StageSnapshot stage;
         if (flowMode(snapshot) == GameFlowMode.QR_EXPLORATION) {
@@ -277,7 +277,7 @@ public class PlayService {
         sessions.findFirstByDeviceTokenHashAndRelease_Game_IdAndStatusOrderByLastActivityAtDesc(
                 deviceHash, game.getId(), PlayStatus.ACTIVE).ifPresent(PlaySession::abandon);
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = new PlaySession(deviceHash, release);
         initializeSessionForSnapshot(session, snapshot);
         return sessions.save(session);
@@ -288,7 +288,7 @@ public class PlayService {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = activeSessionOrRepair(activeSession(deviceHash, game.getId()), game, release, snapshot);
         if (!snapshot.allowNotebook()) throw new IllegalArgumentException("Notes are not enabled for this game.");
         String safeNotes = Objects.toString(notes, "");
@@ -312,7 +312,7 @@ public class PlayService {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = activeSessionOrRepair(activeSession(deviceHash, game.getId()), game, release, snapshot);
         if (requireScannerEnabled && !snapshot.allowQrScanner()) {
             return new QrScanResult(false, false, false, "QR scan is not available for this game.", "STAGE", null, null);
@@ -369,15 +369,19 @@ public class PlayService {
                 minutes, session.getStartedAt(), session.getCompletedAt());
     }
 
-    private boolean hasOptionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer) {
-        return optionRoute(stage, submittedAnswer) != null;
+    private boolean hasOptionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer,
+                                   Set<String> inventory) {
+        return optionRoute(stage, submittedAnswer, inventory) != null;
     }
 
-    private String optionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer) {
+    private String optionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer,
+                               Set<String> inventory) {
         if (stage == null || stage.puzzleType() != PuzzleType.MULTIPLE_CHOICE || stage.getOptionRoutes().isEmpty()) {
             return null;
         }
-        return stage.getOptionRoutes().get(Objects.toString(submittedAnswer, "").trim());
+        ReleaseSnapshot.OptionRoute route = stage.getOptionRoutes()
+                .get(Objects.toString(submittedAnswer, "").trim());
+        return route == null ? null : route.resolve(inventory);
     }
 
     private int stageIndex(ReleaseSnapshot snapshot, String stableKey) {
@@ -410,20 +414,20 @@ public class PlayService {
         if (!inventory.containsAll(requiredItemKeys(stage))) {
             session.recordFailedAttempt();
             attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, false));
-            return new SolveResult(false, false, "Missing required items.");
+            return new SolveResult(false, false, "필요한 아이템이 아직 없습니다.");
         }
         boolean success = !stage.puzzleType().requiresAnswer()
-                || hasOptionRoute(stage, submittedAnswer)
+                || hasOptionRoute(stage, submittedAnswer, inventory)
                 || answers.matches(stage.puzzleType(), submittedAnswer, stage.answerDigest());
         attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, success));
         if (!success) {
             session.recordFailedAttempt();
             return new SolveResult(false, false, "Wrong answer. Try again.");
         }
+        String selectedRoute = optionRoute(stage, submittedAnswer, inventory);
         applyItemExchange(session, stage, inventory);
         session.recordSuccessfulAttempt();
         solved.add(stage.stableKey());
-        String selectedRoute = optionRoute(stage, submittedAnswer);
         if (selectedRoute != null) solved.remove(selectedRoute);
         session.setSolvedStagesJson(writeKeys(solved));
         ReleaseSnapshot.StageSnapshot nextStage = snapshot.stages().stream()
@@ -445,7 +449,7 @@ public class PlayService {
         }
         String message = completed
                 ? "All stages complete."
-                : nextStage != null ? "다음 장면이 열렸습니다." : "Puzzle solved.";
+                : null;
         return new SolveResult(true, completed, message);
     }
 
@@ -460,7 +464,7 @@ public class PlayService {
         EscapeGame game = games.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         GameRelease release = publishing.currentRelease(game);
-        ReleaseSnapshot snapshot = publishing.readSnapshot(release);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
         PlaySession session = activeSessionOrRepair(activeSession(deviceHash, game.getId()), game, release, snapshot);
         if (requireScannerEnabled && !snapshot.allowQrScanner()) {
             return new ClueScanResult(false, false, false, "QR scanning is not available for this game.", null);
@@ -587,6 +591,7 @@ public class PlayService {
         repaired = trimToValidKeys(inventory, itemKeys) || repaired;
         repaired = trimToValidKeys(consumed, itemKeys) || repaired;
         repaired = trimToValidKeys(hints, stageKeys) || repaired;
+        repaired = restoreEarnedInventory(session, snapshot, solved, inventory, consumed) || repaired;
 
         LinkedHashSet<String> orderedSolved = new LinkedHashSet<>();
         for (ReleaseSnapshot.StageSnapshot stage : snapshot.stages()) {
@@ -678,6 +683,7 @@ public class PlayService {
         repaired = trimToValidKeys(inventory, itemKeys) || repaired;
         repaired = trimToValidKeys(consumed, itemKeys) || repaired;
         repaired = trimToValidKeys(hints, stageKeys) || repaired;
+        repaired = restoreEarnedInventory(session, snapshot, solved, inventory, consumed) || repaired;
 
         LinkedHashSet<String> orderedSolved = new LinkedHashSet<>();
         for (ReleaseSnapshot.StageSnapshot stage : snapshot.stages()) {
@@ -734,6 +740,22 @@ public class PlayService {
             repaired = true;
         }
         return repaired;
+    }
+
+    private boolean restoreEarnedInventory(PlaySession session, ReleaseSnapshot snapshot,
+                                           Set<String> solved, Set<String> inventory, Set<String> consumed) {
+        LinkedHashSet<String> earned = new LinkedHashSet<>();
+        snapshot.items().stream().filter(ReleaseSnapshot.ItemSnapshot::initiallyOwned)
+                .map(ReleaseSnapshot.ItemSnapshot::stableKey).forEach(earned::add);
+        if (session.getId() != null) {
+            scannedClueRepository.findAllByPlaySessionIdOrderByScannedAtAsc(session.getId()).stream()
+                    .map(ScannedClue::getItemStableKey).forEach(earned::add);
+        }
+        snapshot.stages().stream().filter(stage -> solved.contains(stage.stableKey()))
+                .map(ReleaseSnapshot.StageSnapshot::rewardItem)
+                .filter(Objects::nonNull).forEach(earned::add);
+        earned.removeAll(consumed);
+        return inventory.addAll(earned);
     }
 
     private String chooseActiveStage(ReleaseSnapshot snapshot, Set<String> solved, Set<String> discovered) {
@@ -858,21 +880,30 @@ public class PlayService {
     }
 
     public record QrScanResult(boolean found, boolean accepted, boolean success,
-                               String message, String targetType, String redirectUrl, String itemStableKey) {
-        public static record Item(String stableKey) {}
+                               String message, String targetType, String redirectUrl,
+                               String itemStableKey, Item item) {
+        public QrScanResult(boolean found, boolean accepted, boolean success,
+                            String message, String targetType, String redirectUrl, String itemStableKey) {
+            this(found, accepted, success, message, targetType, redirectUrl, itemStableKey,
+                    itemStableKey == null ? null : new Item(itemStableKey, null, null, null, null, null, null));
+        }
+
+        public record Item(String stableKey, String name, String description, String clueText,
+                           String emoji, String imageUrl, String copyableText) {}
 
         public static QrScanResult clue(ClueScanResult result) {
+            ReleaseSnapshot.ItemSnapshot item = result.item();
             return new QrScanResult(result.found(), result.accepted(), result.success(),
-                    result.message(), "CLUE", result.redirectUrl(), result.item() == null ? null : result.item().stableKey());
+                    result.message(), "CLUE", result.redirectUrl(), item == null ? null : item.stableKey(),
+                    item == null ? null : new Item(item.stableKey(), item.name(), item.description(), item.clueText(),
+                            item.emoji(), item.imageUrl(), item.copyableText()));
         }
 
         public String getItemStableKey() {
             return itemStableKey;
         }
 
-        public Item getItem() {
-            return itemStableKey == null ? null : new Item(itemStableKey);
-        }
+        public Item getItem() { return item; }
     }
 
     public record SolveResult(boolean success, boolean completed, String message) {

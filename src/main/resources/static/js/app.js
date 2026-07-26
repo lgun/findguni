@@ -304,9 +304,15 @@
         var editor = document.querySelector('[data-stage-create-editor]');
         if (!editor) return;
         var title = editor.querySelector('#new-stage-title');
+        var workspace = editor.closest('[data-stage-workspace]');
+
+        function syncWorkspace() {
+            if (workspace) workspace.classList.toggle('is-creating', editor.open);
+        }
 
         function openEditor(updateAddress, smooth) {
             editor.open = true;
+            syncWorkspace();
             if (updateAddress && window.history.replaceState) {
                 var url = new URL(window.location.href);
                 url.searchParams.set('tab', 'stages');
@@ -325,6 +331,7 @@
             button.addEventListener('click', function () { openEditor(true, true); });
         });
         editor.addEventListener('toggle', function () {
+            syncWorkspace();
             if (!editor.open || !window.history.replaceState) return;
             var url = new URL(window.location.href);
             url.searchParams.set('tab', 'stages');
@@ -333,6 +340,7 @@
             url.hash = 'stages';
             window.history.replaceState(null, '', url.pathname + url.search + url.hash);
         });
+        syncWorkspace();
         if (new URLSearchParams(window.location.search).get('create') === 'stage') openEditor(false, false);
     }
 
@@ -364,6 +372,153 @@
         if (selected) select(selected, false, true);
     }
 
+    function initRequiredItemSelectors() {
+        document.querySelectorAll('[data-required-items]').forEach(function (select) {
+            var none = select.querySelector('[data-no-required-item]');
+            var form = select.closest('form');
+            var consume = form && form.querySelector('[data-consume-required-items]');
+            if (!none) return;
+            var noneWasSelected = none.selected;
+
+            function sync() {
+                var selectedItems = Array.prototype.slice.call(select.options).filter(function (option) {
+                    return option !== none && option.selected;
+                });
+                if (none.selected && !noneWasSelected) {
+                    selectedItems.forEach(function (option) { option.selected = false; });
+                    selectedItems = [];
+                } else if (selectedItems.length) none.selected = false;
+                if (!selectedItems.length) none.selected = true;
+                if (consume) {
+                    consume.disabled = none.selected;
+                    if (none.selected) consume.checked = false;
+                }
+                noneWasSelected = none.selected;
+            }
+
+            select.addEventListener('change', sync);
+            sync();
+        });
+    }
+
+    function initBulkItemSelection() {
+        var checks = Array.prototype.slice.call(document.querySelectorAll('[data-item-bulk-check]'));
+        var toggle = document.querySelector('[data-item-select-all]');
+        var remove = document.querySelector('[data-item-delete-selected]');
+        if (!checks.length || !toggle || !remove) return;
+
+        function sync() {
+            var selected = checks.filter(function (check) { return check.checked; }).length;
+            remove.disabled = selected === 0;
+            remove.textContent = selected ? '선택 삭제 (' + selected + ')' : '선택 삭제';
+            toggle.textContent = selected === checks.length ? '전체 해제' : '전체 선택';
+        }
+
+        checks.forEach(function (check) {
+            check.addEventListener('click', function (event) { event.stopPropagation(); });
+            check.addEventListener('change', sync);
+        });
+        toggle.addEventListener('click', function () {
+            var selectAll = checks.some(function (check) { return !check.checked; });
+            checks.forEach(function (check) { check.checked = selectAll; });
+            sync();
+        });
+        sync();
+    }
+
+    function initBulkStageSelection() {
+        var checks = Array.prototype.slice.call(document.querySelectorAll('[data-stage-bulk-check]'));
+        var toggle = document.querySelector('[data-stage-select-all]');
+        var remove = document.querySelector('[data-stage-delete-selected]');
+        if (!checks.length || !toggle || !remove) return;
+
+        function activeChecks() {
+            return checks.filter(function (check) { return document.contains(check); });
+        }
+
+        function sync() {
+            var active = activeChecks();
+            var selected = active.filter(function (check) { return check.checked; }).length;
+            remove.disabled = selected === 0;
+            remove.textContent = selected ? '선택 삭제 (' + selected + ')' : '선택 삭제';
+            toggle.textContent = active.length && selected === active.length ? '전체 해제' : '전체 선택';
+        }
+
+        checks.forEach(function (check) { check.addEventListener('change', sync); });
+        toggle.addEventListener('click', function () {
+            var active = activeChecks();
+            var selectAll = active.some(function (check) { return !check.checked; });
+            active.forEach(function (check) { check.checked = selectAll; });
+            sync();
+        });
+        sync();
+    }
+
+    function initAsyncStageDeletion() {
+        var forms = Array.prototype.slice.call(document.querySelectorAll('[data-stage-delete-form], #bulk-delete-stages'));
+        if (!forms.length || typeof window.fetch !== 'function') return;
+
+        function selectedIds(form) {
+            if (form.matches('[data-stage-delete-form]')) return [form.dataset.stageId];
+            return Array.prototype.slice.call(document.querySelectorAll('[data-stage-bulk-check]:checked'))
+                .map(function (check) { return check.value; });
+        }
+
+        function removeStages(ids) {
+            ids.forEach(function (id) {
+                var control = document.querySelector('[data-stage-select][data-stage-id="' + id + '"]');
+                var panel = document.querySelector('[data-stage-panel][data-stage-id="' + id + '"]');
+                if (control) {
+                    var row = control.parentElement;
+                    if (row) row.remove();
+                    else control.remove();
+                }
+                if (panel) panel.remove();
+            });
+
+            var remaining = Array.prototype.slice.call(document.querySelectorAll('[data-stage-select]'));
+            var count = document.querySelector('[data-stage-count]');
+            if (count) count.textContent = remaining.length + '개';
+            var remainingCheck = document.querySelector('[data-stage-bulk-check]');
+            if (remainingCheck) remainingCheck.dispatchEvent(new Event('change'));
+            if (remaining.length) {
+                remaining[0].click();
+            } else {
+                var selectAll = document.querySelector('[data-stage-select-all]');
+                var deleteSelected = document.querySelector('[data-stage-delete-selected]');
+                if (selectAll) selectAll.hidden = true;
+                if (deleteSelected) deleteSelected.hidden = true;
+                var workspace = document.querySelector('[data-stage-workspace]');
+                if (workspace) workspace.remove();
+                var create = document.querySelector('[data-stage-create-jump]');
+                if (create) create.click();
+            }
+        }
+
+        forms.forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                var ids = selectedIds(form);
+                if (!ids.length) return;
+                event.preventDefault();
+                var submitter = event.submitter;
+                if (submitter) submitter.disabled = true;
+                window.fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).then(function (response) {
+                    if (!response.ok || response.url.indexOf('/login') >= 0) throw new Error('delete_failed');
+                    removeStages(ids);
+                }).catch(function () {
+                    window.alert('문제를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                }).finally(function () {
+                    if (submitter && document.contains(submitter)) submitter.disabled = false;
+                });
+            });
+        });
+    }
+
     function initOptionRouting() {
         document.querySelectorAll('[data-option-routing]').forEach(function (editor) {
             var source = editor.querySelector('[data-option-source]');
@@ -386,28 +541,73 @@
                 }).slice(0, 20);
             }
 
+            function normalizedRoute(option) {
+                var route = routes[option];
+                if (typeof route === 'string') {
+                    return { requiredItemKey: '', ownedStageKey: route, missingStageKey: '' };
+                }
+                route = route && typeof route === 'object' ? route : {};
+                return {
+                    requiredItemKey: route.requiredItemKey || '',
+                    ownedStageKey: route.ownedStageKey || '',
+                    missingStageKey: route.missingStageKey || ''
+                };
+            }
+
+            function updateRow(row) {
+                var item = row.querySelector('[data-option-route-item]');
+                var ownedLabel = row.querySelector('[data-option-route-owned-label]');
+                var missingField = row.querySelector('[data-option-route-missing-field]');
+                var missing = row.querySelector('[data-option-route-missing]');
+                var conditional = Boolean(item.value);
+                ownedLabel.textContent = conditional ? '아이템이 있을 때 이동' : '선택 시 이동';
+                missingField.hidden = !conditional;
+                missing.disabled = !conditional;
+            }
+
             function sync() {
                 var nextRoutes = {};
-                list.querySelectorAll('[data-option-route-select]').forEach(function (select) {
-                    if (select.value) nextRoutes[select.dataset.option] = select.value;
+                list.querySelectorAll('.option-route-row').forEach(function (row) {
+                    var option = row.dataset.option;
+                    var item = row.querySelector('[data-option-route-item]').value;
+                    var owned = row.querySelector('[data-option-route-owned]').value;
+                    var missing = row.querySelector('[data-option-route-missing]').value;
+                    if (item && (owned || missing)) {
+                        nextRoutes[option] = {
+                            requiredItemKey: item,
+                            ownedStageKey: owned,
+                            missingStageKey: missing
+                        };
+                    } else if (!item && owned) {
+                        nextRoutes[option] = owned;
+                    }
                 });
                 routes = nextRoutes;
                 routesInput.value = JSON.stringify(routes);
             }
 
             function render() {
-                list.querySelectorAll('[data-option-route-select]').forEach(function (select) {
-                    if (select.value) routes[select.dataset.option] = select.value;
-                });
+                if (list.querySelector('[data-option-route-item]')) sync();
                 list.replaceChildren();
                 options().forEach(function (option) {
                     var row = template.content.firstElementChild.cloneNode(true);
                     var label = row.querySelector('[data-option-route-label]');
-                    var select = row.querySelector('[data-option-route-select]');
+                    var item = row.querySelector('[data-option-route-item]');
+                    var owned = row.querySelector('[data-option-route-owned]');
+                    var missing = row.querySelector('[data-option-route-missing]');
+                    var route = normalizedRoute(option);
                     label.textContent = '"' + option + '" 선택 시';
-                    select.dataset.option = option;
-                    select.value = routes[option] || '';
-                    select.addEventListener('change', sync);
+                    row.dataset.option = option;
+                    item.value = route.requiredItemKey;
+                    owned.value = route.ownedStageKey;
+                    missing.value = route.missingStageKey;
+                    item.addEventListener('change', function () {
+                        updateRow(row);
+                        sync();
+                    });
+                    owned.addEventListener('change', sync);
+                    missing.addEventListener('change', sync);
+                    updateRow(row);
                     list.appendChild(row);
                 });
                 sync();
@@ -415,6 +615,60 @@
 
             source.addEventListener('input', render);
             render();
+        });
+    }
+
+    function initDeferredOrdering() {
+        document.querySelectorAll('[data-order-list]').forEach(function (list) {
+            var form = document.getElementById(list.dataset.orderForm);
+            var save = form && form.querySelector('[data-order-save]');
+            if (!form || !save) return;
+
+            function rows() {
+                return Array.prototype.slice.call(list.children).filter(function (row) {
+                    return row.matches('[data-order-row]');
+                });
+            }
+
+            function sync(dirty) {
+                var ordered = rows();
+                ordered.forEach(function (row, index) {
+                    var up = row.querySelector('[data-order-move="up"]');
+                    var down = row.querySelector('[data-order-move="down"]');
+                    var number = row.querySelector('[data-order-number]');
+                    if (up) up.disabled = index === 0;
+                    if (down) down.disabled = index === ordered.length - 1;
+                    if (number) number.textContent = String(index + 1);
+                });
+                form.querySelectorAll('[data-order-value]').forEach(function (input) { input.remove(); });
+                ordered.forEach(function (row) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'orderedIds';
+                    input.value = row.dataset.orderId;
+                    input.dataset.orderValue = '';
+                    form.appendChild(input);
+                });
+                if (dirty) save.disabled = false;
+            }
+
+            list.addEventListener('click', function (event) {
+                var button = event.target.closest('[data-order-move]');
+                if (!button || !list.contains(button)) return;
+                var row = button.closest('[data-order-row]');
+                if (!row) return;
+                var ordered = rows();
+                var index = ordered.indexOf(row);
+                if (button.dataset.orderMove === 'up' && index > 0) {
+                    list.insertBefore(row, ordered[index - 1]);
+                    sync(true);
+                } else if (button.dataset.orderMove === 'down' && index >= 0 && index < ordered.length - 1) {
+                    list.insertBefore(ordered[index + 1], row);
+                    sync(true);
+                }
+            });
+
+            sync(false);
         });
     }
 
@@ -847,11 +1101,16 @@
         initStageWorkspaces();
         initStageCreateEditor();
         initItemEditors();
+        initRequiredItemSelectors();
+        initBulkItemSelection();
+        initBulkStageSelection();
+        initAsyncStageDeletion();
         initThemePreview();
         initCoverPreview();
         initCopyButtons();
         initTypeFields();
         initOptionRouting();
+        initDeferredOrdering();
         initCounters();
         initTemplateFilters();
         initEmojiPickers();

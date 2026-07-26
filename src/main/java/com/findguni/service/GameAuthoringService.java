@@ -1,5 +1,7 @@
 package com.findguni.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.findguni.model.*;
 import com.findguni.repository.*;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import java.util.*;
 @Service
 public class GameAuthoringService {
     private static final String UUID_PATH = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+    private static final ObjectMapper ROUTE_MAPPER = new ObjectMapper();
     private final EscapeGameRepository games;
     private final GameStageRepository stages;
     private final GameItemRepository items;
@@ -45,7 +48,7 @@ public class GameAuthoringService {
     @Transactional(readOnly = true)
     public List<GameItem> items(Long gameId, UserAccount owner) {
         ownedGame(gameId, owner);
-        return items.findAllByGameIdOrderByIdAsc(gameId);
+        return items.findAllByGameIdOrderByPositionAscIdAsc(gameId);
     }
 
     @Transactional
@@ -265,21 +268,43 @@ public class GameAuthoringService {
         GameStage stage = stages.findByIdAndGameOwnerId(stageId, owner.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Long gameId = stage.getGame().getId();
-        stages.delete(stage);
-        stages.flush();
-        normalizePositions(gameId);
+        deleteStages(gameId, List.of(stageId), owner);
         return gameId;
     }
 
     @Transactional
     public Long deleteStage(Long gameId, Long stageId, UserAccount owner) {
+        deleteStages(gameId, List.of(stageId), owner);
+        return gameId;
+    }
+
+    @Transactional
+    public int deleteStages(Long gameId, List<Long> stageIds, UserAccount owner) {
         ownedGame(gameId, owner);
-        GameStage stage = stages.findByIdAndGameId(stageId, gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        stages.delete(stage);
+        Set<Long> selectedIds = stageIds == null ? Set.of() : stageIds.stream()
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (selectedIds.isEmpty()) return 0;
+
+        List<GameStage> allStages = stages.findAllByGameIdOrderByPositionAsc(gameId);
+        List<GameStage> selectedStages = allStages.stream()
+                .filter(stage -> selectedIds.contains(stage.getId()))
+                .toList();
+        if (selectedStages.size() != selectedIds.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Set<String> deletedKeys = selectedStages.stream()
+                .map(GameStage::getStableKey)
+                .collect(java.util.stream.Collectors.toSet());
+
+        allStages.stream().filter(stage -> !selectedIds.contains(stage.getId())).forEach(stage -> {
+            if (deletedKeys.contains(stage.getNextStageKey())) stage.setNextStageKey(null);
+            stage.setOptionRoutesJson(withoutDeletedStageRoutes(stage.getOptionRoutesJson(), deletedKeys));
+        });
+        stages.deleteAll(selectedStages);
         stages.flush();
         normalizePositions(gameId);
-        return gameId;
+        return selectedStages.size();
     }
 
     @Transactional
@@ -314,6 +339,52 @@ public class GameAuthoringService {
     }
 
     @Transactional
+    public void reorderStages(Long gameId, List<Long> orderedIds, UserAccount owner) {
+        ownedGame(gameId, owner);
+        List<GameStage> ordered = stages.findAllByGameIdOrderByPositionAsc(gameId);
+        List<Long> requested = orderedIds == null ? List.of() : orderedIds.stream()
+                .filter(Objects::nonNull).distinct().toList();
+        Set<Long> existingIds = ordered.stream().map(GameStage::getId).collect(java.util.stream.Collectors.toSet());
+        if (requested.size() != ordered.size() || !existingIds.equals(new HashSet<>(requested))) {
+            throw new IllegalArgumentException("문제 목록이 변경되었습니다. 화면을 새로 연 뒤 다시 정렬해 주세요.");
+        }
+        Map<Long, GameStage> byId = ordered.stream()
+                .collect(java.util.stream.Collectors.toMap(GameStage::getId, stage -> stage));
+        for (int i = 0; i < requested.size(); i++) byId.get(requested.get(i)).setPosition(i);
+    }
+
+    @Transactional
+    public Long moveItem(Long gameId, Long itemId, UserAccount owner, String direction) {
+        ownedGame(gameId, owner);
+        GameItem item = items.findByIdAndGameId(itemId, gameId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<GameItem> ordered = items.findAllByGameIdOrderByPositionAscIdAsc(gameId);
+        int index = ordered.indexOf(item);
+        int target = "up".equalsIgnoreCase(direction) ? index - 1 :
+                "down".equalsIgnoreCase(direction) ? index + 1 : index;
+        if (index >= 0 && target >= 0 && target < ordered.size() && target != index) {
+            Collections.swap(ordered, index, target);
+            for (int i = 0; i < ordered.size(); i++) ordered.get(i).setPosition(i);
+        }
+        return gameId;
+    }
+
+    @Transactional
+    public void reorderItems(Long gameId, List<Long> orderedIds, UserAccount owner) {
+        ownedGame(gameId, owner);
+        List<GameItem> ordered = items.findAllByGameIdOrderByPositionAscIdAsc(gameId);
+        List<Long> requested = orderedIds == null ? List.of() : orderedIds.stream()
+                .filter(Objects::nonNull).distinct().toList();
+        Set<Long> existingIds = ordered.stream().map(GameItem::getId).collect(java.util.stream.Collectors.toSet());
+        if (requested.size() != ordered.size() || !existingIds.equals(new HashSet<>(requested))) {
+            throw new IllegalArgumentException("아이템 목록이 변경되었습니다. 화면을 새로 연 뒤 다시 정렬해 주세요.");
+        }
+        Map<Long, GameItem> byId = ordered.stream()
+                .collect(java.util.stream.Collectors.toMap(GameItem::getId, item -> item));
+        for (int i = 0; i < requested.size(); i++) byId.get(requested.get(i)).setPosition(i);
+    }
+
+    @Transactional
     public GameItem addItem(Long gameId, UserAccount owner, String name, String description, String emoji) {
         return addItem(gameId, owner, ItemType.CUSTOM, name, description, "", emoji, false, null);
     }
@@ -342,6 +413,7 @@ public class GameAuthoringService {
                             String imageUrl, String alternateRequiredItem, String alternateScanText) {
         EscapeGame game = ownedGame(gameId, owner);
         GameItem item = new GameItem(game, required(name, "아이템 이름", 80));
+        item.setPosition(items.findAllByGameIdOrderByPositionAscIdAsc(gameId).size());
         item.setDescription(optional(description, 500));
         item.setEmoji(validatedIcon(emoji == null || emoji.isBlank() ? "🗝️" : emoji));
         item.setItemType(itemType == null ? ItemType.CUSTOM : itemType);
@@ -428,14 +500,17 @@ public class GameAuthoringService {
                         .filter(key -> !item.getStableKey().equals(key)).toList());
             }
             if (item.getStableKey().equals(stage.getRewardItem())) stage.setRewardItem(null);
+            stage.setOptionRoutesJson(withoutDeletedItemConditions(stage.getOptionRoutesJson(), item.getStableKey()));
         }
-        for (GameItem candidate : items.findAllByGameIdOrderByIdAsc(gameId)) {
+        for (GameItem candidate : items.findAllByGameIdOrderByPositionAscIdAsc(gameId)) {
             if (item.getStableKey().equals(candidate.getAlternateRequiredItem())) {
                 candidate.setAlternateRequiredItem(null);
                 candidate.setAlternateScanText(null);
             }
         }
         items.delete(item);
+        items.flush();
+        normalizeItemPositions(gameId);
         return gameId;
     }
 
@@ -450,15 +525,29 @@ public class GameAuthoringService {
                         .filter(key -> !item.getStableKey().equals(key)).toList());
             }
             if (item.getStableKey().equals(stage.getRewardItem())) stage.setRewardItem(null);
+            stage.setOptionRoutesJson(withoutDeletedItemConditions(stage.getOptionRoutesJson(), item.getStableKey()));
         }
-        for (GameItem candidate : items.findAllByGameIdOrderByIdAsc(gameId)) {
+        for (GameItem candidate : items.findAllByGameIdOrderByPositionAscIdAsc(gameId)) {
             if (item.getStableKey().equals(candidate.getAlternateRequiredItem())) {
                 candidate.setAlternateRequiredItem(null);
                 candidate.setAlternateScanText(null);
             }
         }
         items.delete(item);
+        items.flush();
+        normalizeItemPositions(gameId);
         return gameId;
+    }
+
+    @Transactional
+    public int deleteItems(Long gameId, List<Long> itemIds, UserAccount owner) {
+        ownedGame(gameId, owner);
+        List<Long> selected = itemIds == null ? List.of() : itemIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        for (Long itemId : selected) deleteItem(gameId, itemId, owner);
+        return selected.size();
     }
 
     @Transactional
@@ -472,6 +561,51 @@ public class GameAuthoringService {
     public void updateStageOptionRoutes(Long gameId, Long stageId, UserAccount owner, String optionRoutesJson) {
         GameStage stage = ownedStage(gameId, stageId, owner);
         stage.setOptionRoutesJson(optionalOrNull(optionRoutesJson, 20_000));
+    }
+
+    private String withoutDeletedStageRoutes(String routesJson, Set<String> deletedKeys) {
+        if (routesJson == null || routesJson.isBlank() || deletedKeys.isEmpty()) return routesJson;
+        try {
+            JsonNode root = ROUTE_MAPPER.readTree(routesJson);
+            if (!root.isObject()) return routesJson;
+            Iterator<Map.Entry<String, JsonNode>> fields = root.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                JsonNode route = field.getValue();
+                if (route.isTextual() && deletedKeys.contains(route.asText())) {
+                    fields.remove();
+                    continue;
+                }
+                if (!route.isObject()) continue;
+                com.fasterxml.jackson.databind.node.ObjectNode object =
+                        (com.fasterxml.jackson.databind.node.ObjectNode) route;
+                if (deletedKeys.contains(object.path("ownedStageKey").asText())) object.remove("ownedStageKey");
+                if (deletedKeys.contains(object.path("missingStageKey").asText())) object.remove("missingStageKey");
+                if (!object.hasNonNull("ownedStageKey") && !object.hasNonNull("missingStageKey")) fields.remove();
+            }
+            return root.isEmpty() ? null : ROUTE_MAPPER.writeValueAsString(root);
+        } catch (Exception ignored) {
+            return routesJson;
+        }
+    }
+
+    private String withoutDeletedItemConditions(String routesJson, String deletedItemKey) {
+        if (routesJson == null || routesJson.isBlank() || deletedItemKey == null) return routesJson;
+        try {
+            JsonNode root = ROUTE_MAPPER.readTree(routesJson);
+            if (!root.isObject()) return routesJson;
+            Iterator<Map.Entry<String, JsonNode>> fields = root.fields();
+            while (fields.hasNext()) {
+                JsonNode route = fields.next().getValue();
+                if (route.isObject()
+                        && deletedItemKey.equals(route.path("requiredItemKey").asText(null))) {
+                    fields.remove();
+                }
+            }
+            return root.isEmpty() ? null : ROUTE_MAPPER.writeValueAsString(root);
+        } catch (Exception ignored) {
+            return routesJson;
+        }
     }
 
     @Transactional
@@ -651,6 +785,7 @@ public class GameAuthoringService {
     private GameItem addTemplateItem(EscapeGame game, ItemType type, String name, String description,
                                      String emoji, String clueText, boolean qrEnabled) {
         GameItem item = new GameItem(game, name);
+        item.setPosition(items.findAllByGameIdOrderByPositionAscIdAsc(game.getId()).size());
         item.setItemType(type);
         item.setDescription(description);
         item.setEmoji(emoji);
@@ -661,6 +796,11 @@ public class GameAuthoringService {
 
     private void normalizePositions(Long gameId) {
         List<GameStage> ordered = stages.findAllByGameIdOrderByPositionAsc(gameId);
+        for (int i = 0; i < ordered.size(); i++) ordered.get(i).setPosition(i);
+    }
+
+    private void normalizeItemPositions(Long gameId) {
+        List<GameItem> ordered = items.findAllByGameIdOrderByPositionAscIdAsc(gameId);
         for (int i = 0; i < ordered.size(); i++) ordered.get(i).setPosition(i);
     }
 
@@ -711,7 +851,7 @@ public class GameAuthoringService {
     private String validatedItemKey(Long gameId, String value) {
         String key = optionalOrNull(value, 36);
         if (key == null) return null;
-        boolean exists = items.findAllByGameIdOrderByIdAsc(gameId).stream()
+        boolean exists = items.findAllByGameIdOrderByPositionAscIdAsc(gameId).stream()
                 .anyMatch(item -> item.getStableKey().equals(key));
         if (!exists) throw new IllegalArgumentException("대체 QR 장면 조건 아이템이 존재하지 않습니다.");
         return key;
@@ -750,11 +890,10 @@ public class GameAuthoringService {
     }
     private String validatedUploadUrl(String value) {
         if (value == null || value.isBlank()) return null;
-        if (isBundledImagePath(value)) return value;
-        if (!value.matches("/uploads/[0-9a-fA-F-]{36}\\.(jpg|png)")) {
-            throw new IllegalArgumentException("허용되지 않은 이미지 경로입니다.");
-        }
-        return value;
+        String cleaned = value.trim();
+        if (isBundledImagePath(cleaned)) return cleaned;
+        if (cleaned.matches("/uploads/" + UUID_PATH + "\\.(jpg|png)")) return cleaned;
+        return validatedHttpsUrl(cleaned, "아이템 이미지 URL");
     }
     private String validatedSceneImageUrl(String value) {
         String cleaned = optional(value, 1000);

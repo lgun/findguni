@@ -399,6 +399,16 @@ public class MakerController {
         return "redirect:/maker/games/" + targetGameId + "/edit?tab=stages";
     }
 
+    @PostMapping("/games/{gameId}/stages/delete-selected")
+    public String deleteSelectedStages(@PathVariable Long gameId,
+                                       @RequestParam(name = "stageIds", required = false) List<Long> stageIds,
+                                       Authentication authentication, RedirectAttributes redirect) {
+        int deleted = authoring.deleteStages(gameId, stageIds, accounts.current(authentication));
+        if (deleted == 0) redirect.addFlashAttribute("error", "삭제할 문제를 선택해 주세요.");
+        else redirect.addFlashAttribute("success", deleted + "개 문제를 삭제했습니다.");
+        return "redirect:/maker/games/" + gameId + "/edit?tab=stages";
+    }
+
     @PostMapping({"/stages/{stageId}/move", "/games/{gameId}/stages/{stageId}/move"})
     public String moveStage(@PathVariable(required = false) Long gameId, @PathVariable Long stageId, @RequestParam String direction,
                             Authentication authentication) {
@@ -406,6 +416,39 @@ public class MakerController {
         Long targetGameId = gameId == null ? authoring.moveStage(stageId, maker, direction)
                 : authoring.moveStage(gameId, stageId, maker, direction);
         return "redirect:/maker/games/" + targetGameId + "/edit?tab=stages&edit=" + stageId;
+    }
+
+    @PostMapping("/games/{gameId}/stages/order")
+    public String reorderStages(@PathVariable Long gameId,
+                                @RequestParam(name = "orderedIds", required = false) List<Long> orderedIds,
+                                Authentication authentication, RedirectAttributes redirect) {
+        try {
+            authoring.reorderStages(gameId, orderedIds, accounts.current(authentication));
+            redirect.addFlashAttribute("success", "문제 순서를 저장했습니다.");
+        } catch (IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/maker/games/" + gameId + "/edit?tab=stages";
+    }
+
+    @PostMapping("/games/{gameId}/items/{itemId}/move")
+    public String moveItem(@PathVariable Long gameId, @PathVariable Long itemId,
+                           @RequestParam String direction, Authentication authentication) {
+        authoring.moveItem(gameId, itemId, accounts.current(authentication), direction);
+        return "redirect:/maker/games/" + gameId + "/edit?tab=items&item=" + itemId;
+    }
+
+    @PostMapping("/games/{gameId}/items/order")
+    public String reorderItems(@PathVariable Long gameId,
+                               @RequestParam(name = "orderedIds", required = false) List<Long> orderedIds,
+                               Authentication authentication, RedirectAttributes redirect) {
+        try {
+            authoring.reorderItems(gameId, orderedIds, accounts.current(authentication));
+            redirect.addFlashAttribute("success", "아이템 순서를 저장했습니다.");
+        } catch (IllegalArgumentException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/maker/games/" + gameId + "/edit?tab=items";
     }
 
     @PostMapping("/games/{id}/items")
@@ -472,6 +515,16 @@ public class MakerController {
                 : authoring.deleteItem(gameId, itemId, maker);
         redirect.addFlashAttribute("success", "아이템을 삭제했습니다.");
         return "redirect:/maker/games/" + targetGameId + "/edit?tab=items";
+    }
+
+    @PostMapping("/games/{gameId}/items/delete-selected")
+    public String deleteSelectedItems(@PathVariable Long gameId,
+                                      @RequestParam(name = "itemIds", required = false) List<Long> itemIds,
+                                      Authentication authentication, RedirectAttributes redirect) {
+        int deleted = authoring.deleteItems(gameId, itemIds, accounts.current(authentication));
+        if (deleted == 0) redirect.addFlashAttribute("error", "삭제할 아이템을 선택해 주세요.");
+        else redirect.addFlashAttribute("success", deleted + "개 아이템을 삭제했습니다.");
+        return "redirect:/maker/games/" + gameId + "/edit?tab=items";
     }
 
     @PostMapping("/games/{id}/publish")

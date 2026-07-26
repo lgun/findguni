@@ -267,28 +267,46 @@
                     <div class="builder-section__head">
                         <div><h2 th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '선형 문제 순서' : 'QR 문제 보드'}">QR 문제 보드</h2><p th:text="${game.flowMode != null and game.flowMode.name() == 'LINEAR' ? '위에서 아래 순서대로 진행됩니다. 문제 카드는 한 번에 하나만 열립니다.' : '문제마다 QR을 인쇄해 원하는 장소에 배치하세요. 플레이어는 순서 없이 발견하고 해결합니다.'}">문제마다 QR을 배치하세요.</p></div>
                         <div class="button-row">
-                            <span class="badge" th:text="|${stages != null ? #lists.size(stages) : 0}개|">0개</span>
+                            <span class="badge" data-stage-count th:text="|${stages != null ? #lists.size(stages) : 0}개|">0개</span>
+                            <form id="save-stage-order" th:action="@{/maker/games/{gameId}/stages/order(gameId=${game.id})}" method="post">
+                                <button class="btn btn--secondary btn--small" type="submit" data-order-save disabled>순서 저장</button>
+                            </form>
+                            <button class="btn btn--secondary btn--small" type="button" data-stage-select-all
+                                    th:unless="${stages == null or #lists.isEmpty(stages)}">전체 선택</button>
+                            <button class="btn btn--quiet btn--small" type="submit" form="bulk-delete-stages"
+                                    data-stage-delete-selected data-confirm="선택한 문제를 모두 삭제할까요? 연결된 다음 문제와 객관식 이동 경로도 함께 해제됩니다."
+                                    th:unless="${stages == null or #lists.isEmpty(stages)}" disabled>선택 삭제</button>
                             <button class="btn btn--small" type="button" data-stage-create-jump>새 문제 추가</button>
                         </div>
                     </div>
+                    <form id="bulk-delete-stages" th:action="@{/maker/games/{gameId}/stages/delete-selected(gameId=${game.id})}" method="post"></form>
                     <div class="empty-state" th:if="${stages == null or #lists.isEmpty(stages)}">
                         <div class="empty-state__icon" aria-hidden="true">▣</div>
                         <h3>첫 문제를 추가하세요</h3>
                         <p>제목과 유형만 고르면 바로 만들 수 있습니다. 세부 내용과 연출은 나중에 편집하세요.</p>
                     </div>
                     <div class="stage-workspace" data-stage-workspace th:unless="${stages == null or #lists.isEmpty(stages)}">
-                        <nav class="stage-index" aria-label="문제 목록">
-                            <a class="stage-index__item" data-stage-select th:each="stage, iter : ${stages}"
-                               th:href="@{/maker/games/{id}/edit(id=${game.id},tab='stages',edit=${stage.id})}"
-                               th:attr="data-stage-id=${stage.id},aria-controls=|stage-card-${stage.id}|,aria-current=${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first) ? 'true' : 'false'}"
-                               th:classappend="${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first)} ? ' is-active' : ''">
-                                <span class="stage-card__number" th:text="${iter.count}">1</span>
-                                <span class="stage-card__title">
-                                    <strong th:text="${stage.title}">문제 제목</strong>
-                                    <span><span th:text="${stage.puzzleType.displayName}">문제 유형</span><b th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}" th:text="| · ${stage.entryMode.displayName}|"> · QR로 발견</b></span>
+                        <nav class="stage-index" aria-label="문제 목록" data-order-list data-order-form="save-stage-order">
+                            <div class="stage-index__row" th:each="stage, iter : ${stages}"
+                                 data-order-row th:attr="data-order-id=${stage.id}">
+                                <input type="checkbox" name="stageIds" th:value="${stage.id}" form="bulk-delete-stages"
+                                       data-stage-bulk-check th:attr="aria-label=|${stage.title} 삭제 대상으로 선택|">
+                                <a class="stage-index__item" data-stage-select
+                                   th:href="@{/maker/games/{id}/edit(id=${game.id},tab='stages',edit=${stage.id})}"
+                                   th:attr="data-stage-id=${stage.id},aria-controls=|stage-card-${stage.id}|,aria-current=${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first) ? 'true' : 'false'}"
+                                   th:classappend="${(selectedStageId != null and stage.id == selectedStageId) or (selectedStageId == null and iter.first)} ? ' is-active' : ''">
+                                    <span class="stage-card__number" data-order-number th:text="${iter.count}">1</span>
+                                    <span class="stage-card__title">
+                                        <strong th:text="${stage.title}">문제 제목</strong>
+                                        <span><span th:text="${stage.puzzleType.displayName}">문제 유형</span><b th:if="${game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION'}" th:text="| · ${stage.entryMode.displayName}|"> · QR로 발견</b></span>
+                                    </span>
+                                    <span class="badge badge--accent" th:if="${(game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION') and stage.qrEnabled}">QR</span>
+                                </a>
+                                <span class="stage-index__order">
+                                    <button class="icon-btn" type="button" data-order-move="up" th:disabled="${iter.first}" th:attr="aria-label=|${stage.title} 위로 이동|" title="위로 이동">↑</button>
+                                    <button class="icon-btn" type="button" data-order-move="down" th:disabled="${iter.last}" th:attr="aria-label=|${stage.title} 아래로 이동|" title="아래로 이동">↓</button>
                                 </span>
-                                <span class="badge badge--accent" th:if="${(game.flowMode == null or game.flowMode.name() == 'QR_EXPLORATION') and stage.qrEnabled}">QR</span>
-                            </a>
+                            </div>
                         </nav>
 
                         <div class="stage-workspace__editors" data-stage-editors>
@@ -358,11 +376,38 @@
                                     <label class="field__label" th:for="|stage-story-${stage.id}|">이야기</label>
                                     <textarea class="textarea" th:id="|stage-story-${stage.id}|" name="story" th:text="${stage.story}" placeholder="플레이어가 읽을 장면과 단서를 적어주세요."></textarea>
                                 </div>
+                                <section class="item-media-editor" th:attr="aria-labelledby=|stage-image-title-${stage.id}|">
+                                    <div class="item-thumb item-thumb--preview">
+                                        <img th:id="|stage-scene-preview-${stage.id}|" th:src="${stage.sceneImageUrl}"
+                                             th:hidden="${stage.sceneImageUrl == null or #strings.isEmpty(stage.sceneImageUrl)}"
+                                             th:alt="|${stage.title} 문제 이미지 미리보기|">
+                                        <span th:hidden="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}" aria-hidden="true">📷</span>
+                                    </div>
+                                    <div class="form-grid">
+                                        <div class="field">
+                                            <label class="field__label" th:id="|stage-image-title-${stage.id}|" th:for="|stage-scene-photo-${stage.id}|">문제 이미지</label>
+                                            <input class="file-input" th:id="|stage-scene-photo-${stage.id}|" type="file" name="scenePhoto"
+                                                   accept="image/*" capture="environment"
+                                                   th:attr="data-photo-input=|stage-scene-preview-${stage.id}|,data-photo-upload-for=|stage-scene-${stage.id}|">
+                                            <span class="field__hint">사진을 촬영하거나 기기에서 선택하면 플레이 화면의 문제 장면에 표시됩니다.</span>
+                                        </div>
+                                        <div class="field">
+                                            <label class="field__label" th:for="|stage-scene-url-${stage.id}|">이미지 URL <span class="badge">선택</span></label>
+                                            <input class="input" th:id="|stage-scene-url-${stage.id}|" type="url" name="sceneImageUrl"
+                                                   th:value="${stage.sceneImageUrl}" placeholder="https://example.com/scene.jpg">
+                                        </div>
+                                        <label class="check-row" th:if="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}">
+                                            <input type="checkbox" name="removeSceneImage" value="true"
+                                                   th:attr="data-photo-remove-for=|stage-scene-${stage.id}|">
+                                            <span><strong>현재 문제 이미지 삭제</strong><small>저장하면 플레이 화면에서도 제거됩니다.</small></span>
+                                        </label>
+                                    </div>
+                                </section>
                                 <details class="advanced-editor">
-                                    <summary><span><strong>장면·효과음 연출</strong><small>사진, 등장 효과, Openverse 효과음</small></span><span aria-hidden="true">⌄</span></summary>
+                                    <summary><span><strong>효과음·등장 연출</strong><small>이야기 등장 효과, Openverse 효과음</small></span><span aria-hidden="true">⌄</span></summary>
                                     <div class="advanced-editor__body">
                                 <section class="stage-cinematic" th:attr="aria-labelledby=|stage-cinematic-title-${stage.id}|">
-                                    <div class="audio-picker__head"><div><strong th:id="|stage-cinematic-title-${stage.id}|">장면 연출</strong><p>장면 사진과 이야기 등장 효과를 선택하세요.</p></div><span class="badge">Scene</span></div>
+                                    <div class="audio-picker__head"><div><strong th:id="|stage-cinematic-title-${stage.id}|">이야기 등장 연출</strong><p>문제 장면이 나타나는 효과를 선택하세요.</p></div><span class="badge">Scene</span></div>
                                     <div class="field">
                                         <label class="field__label" th:for="|stage-effect-${stage.id}|">이야기 효과</label>
                                         <select class="select" th:id="|stage-effect-${stage.id}|" name="storyEffect">
@@ -375,21 +420,6 @@
                                             <option value="SPOTLIGHT" th:selected="${stage.storyEffect != null and stage.storyEffect.name() == 'SPOTLIGHT'}">스포트라이트</option>
                                         </select>
                                     </div>
-                                    <div class="form-grid form-grid--2">
-                                        <div class="field">
-                                            <label class="field__label" th:for="|stage-scene-url-${stage.id}|">장면 이미지 URL</label>
-                                            <input class="input" th:id="|stage-scene-url-${stage.id}|" type="url" name="sceneImageUrl" th:value="${stage.sceneImageUrl}" placeholder="https://example.com/scene.jpg">
-                                        </div>
-                                        <div class="field">
-                                            <label class="field__label" th:for="|stage-scene-photo-${stage.id}|">장면 사진 업로드</label>
-                                            <input class="file-input" th:id="|stage-scene-photo-${stage.id}|" type="file" name="scenePhoto" accept="image/*" capture="environment" data-photo-input th:attr="data-photo-input=|stage-scene-preview-${stage.id}|,data-photo-upload-for=|stage-scene-${stage.id}|">
-                                        </div>
-                                    </div>
-                                    <div class="scene-image-preview" th:if="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}">
-                                        <img th:id="|stage-scene-preview-${stage.id}|" th:src="${stage.sceneImageUrl}" th:alt="|${stage.title} 현재 장면 이미지|">
-                                        <label class="check-row"><input type="checkbox" name="removeSceneImage" value="true" th:attr="data-photo-remove-for=|stage-scene-${stage.id}|"> 현재 장면 이미지 삭제</label>
-                                    </div>
-                                    <img class="scene-image-preview__image" th:unless="${stage.sceneImageUrl != null and !#strings.isEmpty(stage.sceneImageUrl)}" th:id="|stage-scene-preview-${stage.id}|" alt="새 장면 이미지 미리보기" hidden>
                                 </section>
                                 <section class="stage-audio" th:attr="aria-labelledby=|stage-audio-title-${stage.id}|">
                                     <div class="audio-picker__head"><div><strong th:id="|stage-audio-title-${stage.id}|">효과음</strong><p>이 스테이지가 열릴 때 한 번 재생할 소리를 고르세요.</p></div><span class="badge">SFX</span></div>
@@ -431,29 +461,49 @@
                                 <div class="field" data-types="MULTIPLE_CHOICE" data-option-routing>
                                     <label class="field__label" th:for="|stage-options-${stage.id}|">선택지</label>
                                     <textarea class="textarea" th:id="|stage-options-${stage.id}|" name="optionsText" data-option-source th:text="${stage.optionsText}" placeholder="선택지를 한 줄에 하나씩 입력하세요."></textarea>
-                                    <span class="field__hint">한 줄마다 선택 버튼이 만들어집니다. 목적지를 지정하지 않은 선택지는 위 정답 칸으로 판정합니다.</span>
+                                    <span class="field__hint">한 줄마다 선택 버튼이 만들어집니다. 각 선택지에서 아이템 보유 여부에 따른 이동 페이지를 지정할 수 있습니다.</span>
                                     <input type="hidden" name="optionRoutesJson" data-option-routes th:value="${stage.optionRoutesJson != null ? stage.optionRoutesJson : '{}'}">
                                     <div class="option-route-list" data-option-route-list></div>
                                     <template data-option-route-template>
-                                        <label class="option-route-row">
+                                        <div class="option-route-row">
                                             <strong data-option-route-label>선택지</strong>
-                                            <select class="select" data-option-route-select>
-                                                <option value="">기존 정답 판정 사용</option>
-                                                <option th:each="candidate : ${stages}" th:if="${candidate.id != stage.id}" th:value="${candidate.stableKey}" th:text="|${candidate.title}(으)로 이동|">다음 문제로 이동</option>
-                                            </select>
-                                        </label>
+                                            <div class="form-grid form-grid--2">
+                                                <label class="field">
+                                                    <span class="field__label">조건 아이템</span>
+                                                    <select class="select" data-option-route-item>
+                                                        <option value="">아이템 조건 없이 이동</option>
+                                                        <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}">아이템</option>
+                                                    </select>
+                                                </label>
+                                                <label class="field">
+                                                    <span class="field__label" data-option-route-owned-label>선택 시 이동</span>
+                                                    <select class="select" data-option-route-owned>
+                                                        <option value="">기존 정답 판정 사용</option>
+                                                        <option th:each="candidate : ${stages}" th:if="${candidate.id != stage.id}" th:value="${candidate.stableKey}" th:text="${candidate.title}">이동할 문제</option>
+                                                    </select>
+                                                </label>
+                                                <label class="field" data-option-route-missing-field hidden>
+                                                    <span class="field__label">아이템이 없을 때 이동</span>
+                                                    <select class="select" data-option-route-missing>
+                                                        <option value="">페이지 선택</option>
+                                                        <option th:each="candidate : ${stages}" th:if="${candidate.id != stage.id}" th:value="${candidate.stableKey}" th:text="${candidate.title}">이동할 문제</option>
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        </div>
                                     </template>
                                 </div>
                                 <div class="form-grid form-grid--2">
                                     <div class="field">
                                         <label class="field__label" th:for="|stage-required-${stage.id}|">필요 아이템 · 조합 재료</label>
                                         <input type="hidden" name="requiredItemId" value="">
-                                        <select class="select" th:id="|stage-required-${stage.id}|" name="requiredItemIds" multiple size="5">
+                                        <select class="select" th:id="|stage-required-${stage.id}|" name="requiredItemIds" multiple size="5" data-required-items>
+                                            <option value="" data-no-required-item th:selected="${stage.requiredItems == null or stage.requiredItems.isEmpty()}">필요 아이템 없음</option>
                                             <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}" th:selected="${stage.requiredItems.contains(item.stableKey)}">아이템</option>
                                         </select>
-                                        <span class="field__hint">Ctrl(Windows) 또는 Cmd(Mac)를 누르고 여러 재료를 고를 수 있습니다.</span>
+                                        <span class="field__hint">아이템이 필요 없으면 첫 줄을 선택하세요. 여러 재료는 Ctrl(Windows) 또는 Cmd(Mac)를 누르고 선택합니다.</span>
                                         <label class="check-row">
-                                            <input type="checkbox" name="consumeRequiredItems" value="true" th:checked="${stage.consumeRequiredItems}">
+                                            <input type="checkbox" name="consumeRequiredItems" value="true" th:checked="${stage.consumeRequiredItems}" data-consume-required-items>
                                             <input type="hidden" name="consumeRequiredItems" value="false">
                                             <span><strong>해결할 때 재료 사용 처리</strong><small>조합소나 NPC에게 건네는 아이템은 가방에서 사라집니다.</small></span>
                                         </label>
@@ -469,9 +519,8 @@
                             </form>
                             <div class="stage-actions">
                                 <button class="btn btn--small" type="submit" th:attr="form=|stage-edit-form-${stage.id}|">문제 저장</button>
-                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="up"><button class="btn btn--secondary btn--small" type="submit" aria-label="위로 이동">↑ 위로</button></form>
-                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/move(gameId=${game.id},stageId=${stage.id})}" method="post"><input type="hidden" name="direction" value="down"><button class="btn btn--secondary btn--small" type="submit" aria-label="아래로 이동">↓ 아래로</button></form>
-                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/delete(gameId=${game.id},stageId=${stage.id})}" method="post"><button class="btn btn--quiet btn--small" type="submit" data-confirm="이 문제를 삭제할까요? 연결된 진행 흐름을 다시 확인해야 합니다.">삭제</button></form>
+                                <form th:action="@{/maker/games/{gameId}/stages/{stageId}/delete(gameId=${game.id},stageId=${stage.id})}" method="post"
+                                      data-stage-delete-form th:attr="data-stage-id=${stage.id}"><button class="btn btn--quiet btn--small" type="submit" data-confirm="이 문제를 삭제할까요? 연결된 진행 흐름을 다시 확인해야 합니다.">삭제</button></form>
                             </div>
                         </details>
                         </div>
@@ -508,16 +557,35 @@
                                 </div>
                                 <input type="hidden" name="optionRoutesJson" value="{}" data-option-routes>
                                 <div class="field">
-                                    <span class="field__label">선택지별 이동 경로</span>
+                                    <span class="field__label">선택지별 아이템 분기</span>
                                     <div class="option-route-list" data-option-route-list></div>
                                     <template data-option-route-template>
-                                        <label class="option-route-row">
+                                        <div class="option-route-row">
                                             <strong data-option-route-label>선택지</strong>
-                                            <select class="select" data-option-route-select>
-                                                <option value="">기존 정답 판정 사용</option>
-                                                <option th:each="candidate : ${stages}" th:value="${candidate.stableKey}" th:text="|${candidate.title}(으)로 이동|">다음 문제로 이동</option>
-                                            </select>
-                                        </label>
+                                            <div class="form-grid form-grid--2">
+                                                <label class="field">
+                                                    <span class="field__label">조건 아이템</span>
+                                                    <select class="select" data-option-route-item>
+                                                        <option value="">아이템 조건 없이 이동</option>
+                                                        <option th:each="item : ${items}" th:value="${item.stableKey}" th:text="${item.name}">아이템</option>
+                                                    </select>
+                                                </label>
+                                                <label class="field">
+                                                    <span class="field__label" data-option-route-owned-label>선택 시 이동</span>
+                                                    <select class="select" data-option-route-owned>
+                                                        <option value="">기존 정답 판정 사용</option>
+                                                        <option th:each="candidate : ${stages}" th:value="${candidate.stableKey}" th:text="${candidate.title}">이동할 문제</option>
+                                                    </select>
+                                                </label>
+                                                <label class="field" data-option-route-missing-field hidden>
+                                                    <span class="field__label">아이템이 없을 때 이동</span>
+                                                    <select class="select" data-option-route-missing>
+                                                        <option value="">페이지 선택</option>
+                                                        <option th:each="candidate : ${stages}" th:value="${candidate.stableKey}" th:text="${candidate.title}">이동할 문제</option>
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        </div>
                                     </template>
                                 </div>
                             </div>
@@ -544,15 +612,38 @@
 
             <section class="builder-panel" id="panel-items" role="tabpanel" aria-labelledby="tab-items" hidden>
                 <div class="card builder-section">
-                    <div class="builder-section__head"><div><h2>QR 단서·아이템</h2><p>QR을 스캔해 얻는 단서를 기본으로 만들고, 필요하면 열쇠와 도구로 문제 조건에 연결하세요.</p></div><span class="badge" th:text="|${items != null ? #lists.size(items) : 0}개|">0개</span></div>
+                    <div class="builder-section__head">
+                        <div><h2>QR 단서·아이템</h2><p>QR을 스캔해 얻는 단서를 기본으로 만들고, 필요하면 열쇠와 도구로 문제 조건에 연결하세요.</p></div>
+                        <div class="button-row" th:unless="${items == null or #lists.isEmpty(items)}">
+                            <span class="badge" th:text="|${#lists.size(items)}개|">0개</span>
+                            <form id="save-item-order" th:action="@{/maker/games/{gameId}/items/order(gameId=${game.id})}" method="post">
+                                <button class="btn btn--secondary btn--small" type="submit" data-order-save disabled>순서 저장</button>
+                            </form>
+                            <button class="btn btn--secondary btn--small" type="button" data-item-select-all>전체 선택</button>
+                            <button class="btn btn--quiet btn--small" type="submit" form="bulk-delete-items"
+                                    data-item-delete-selected data-confirm="선택한 아이템을 모두 삭제할까요? 문제에 연결된 필요·획득 아이템 설정도 함께 해제됩니다." disabled>선택 삭제</button>
+                        </div>
+                    </div>
+                    <form id="bulk-delete-items" th:action="@{/maker/games/{gameId}/items/delete-selected(gameId=${game.id})}" method="post"></form>
                     <div class="empty-state" th:if="${items == null or #lists.isEmpty(items)}">
                         <div class="empty-state__icon" aria-hidden="true">◇</div><h3>첫 QR 단서를 만들어보세요</h3><p>플레이어가 QR을 스캔하면 사진과 설명이 단서장에 기록됩니다.</p>
                     </div>
-                    <div class="stack" th:unless="${items == null or #lists.isEmpty(items)}">
-                        <details class="card item-editor" th:each="item : ${items}" th:id="|item-editor-${item.id}|"
-                                 th:attr="data-item-id=${item.id}" th:open="${selectedItemId != null and item.id == selectedItemId}">
+                    <div class="stack" th:unless="${items == null or #lists.isEmpty(items)}"
+                         data-order-list data-order-form="save-item-order">
+                        <div th:each="item, iter : ${items}" data-order-row th:attr="data-order-id=${item.id}"
+                             style="display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:.5rem">
+                            <span class="item-order-controls">
+                                <button class="icon-btn" type="button" data-order-move="up" th:disabled="${iter.first}" th:attr="aria-label=|${item.name} 위로 이동|" title="위로 이동">↑</button>
+                                <button class="icon-btn" type="button" data-order-move="down" th:disabled="${iter.last}" th:attr="aria-label=|${item.name} 아래로 이동|" title="아래로 이동">↓</button>
+                            </span>
+                            <details class="card item-editor" th:id="|item-editor-${item.id}|"
+                                     th:attr="data-item-id=${item.id}" th:open="${selectedItemId != null and item.id == selectedItemId}">
                             <summary class="item-editor__summary">
-                                <span class="item-thumb item-thumb--small"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" alt=""><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></span>
+                                <span class="item-editor__selection">
+                                    <input type="checkbox" name="itemIds" th:value="${item.id}" form="bulk-delete-items"
+                                           data-item-bulk-check th:attr="aria-label=|${item.name} 삭제 대상으로 선택|">
+                                    <span class="item-thumb item-thumb--small"><img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:src="${item.imageUrl}" alt=""><span th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}" th:text="${item.emoji != null ? item.emoji : '◇'}">◇</span></span>
+                                </span>
                                 <span><strong th:text="${item.name}">아이템 이름</strong><small th:text="${item.itemType != null ? item.itemType.displayName : '커스텀'}">아이템 유형</small></span>
                                 <span class="cluster"><span class="badge badge--success" th:if="${item.initiallyOwned}">시작</span><span class="badge badge--accent" th:if="${item.qrEnabled}">QR</span><span aria-hidden="true">⌄</span></span>
                             </summary>
@@ -596,7 +687,8 @@
                                 </div>
                                 <div class="stage-actions"><button class="btn btn--small" type="submit">아이템 저장</button><button class="btn btn--quiet btn--small" type="submit" th:formaction="@{/maker/games/{gameId}/items/{itemId}/delete(gameId=${game.id},itemId=${item.id})}" data-confirm="이 아이템을 삭제할까요? 사용 중인 스테이지가 없는지 확인하세요.">삭제</button></div>
                             </form>
-                        </details>
+                            </details>
+                        </div>
                     </div>
                     <form class="card__body form-grid" th:action="@{/maker/games/{id}/items(id=${game.id})}" method="post" enctype="multipart/form-data" style="margin-top:1rem;background:var(--surface-2);border-radius:var(--radius-md)">
                         <h3 style="margin:0">새 QR 단서·아이템</h3>
