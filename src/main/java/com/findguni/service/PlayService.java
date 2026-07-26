@@ -705,7 +705,14 @@ public class PlayService {
         LinkedHashSet<String> normalizedDiscovered = repairedDiscovered.equals(discovered) ? discovered : repairedDiscovered;
         repaired = !repairedDiscovered.equals(discovered) || repaired;
 
-        String preferredActive = chooseActiveStage(snapshot, solved, normalizedDiscovered);
+        String currentActive = session.getActiveStageKey();
+        boolean currentActiveIsValid = currentActive != null
+                && stageKeys.contains(currentActive)
+                && normalizedDiscovered.contains(currentActive)
+                && !solved.contains(currentActive);
+        String preferredActive = currentActiveIsValid
+                ? currentActive
+                : chooseActiveStage(snapshot, solved, normalizedDiscovered);
         if (!Objects.equals(session.getActiveStageKey(), preferredActive)) {
             session.setActiveStageKey(preferredActive);
             repaired = true;
