@@ -74,6 +74,44 @@ public class PlayService {
         return sessions.save(session);
     }
 
+    @Transactional
+    public boolean openStagePreview(String slug, String deviceHash, String stageStableKey) {
+        EscapeGame game = playableGame(slug);
+        ReleaseSnapshot snapshot = publishing.snapshot(game);
+        PlaySession session = startOrResume(slug, deviceHash);
+        int stageIndex = -1;
+        for (int i = 0; i < snapshot.stages().size(); i++) {
+            if (Objects.equals(snapshot.stages().get(i).stableKey(), stageStableKey)) {
+                stageIndex = i;
+                break;
+            }
+        }
+        if (stageIndex < 0) return false;
+
+        session.setStatus(PlayStatus.ACTIVE);
+        LinkedHashSet<String> solved = new LinkedHashSet<>();
+        if (flowMode(snapshot) == GameFlowMode.QR_EXPLORATION) {
+            LinkedHashSet<String> discovered = new LinkedHashSet<>();
+            for (int i = 0; i < stageIndex; i++) {
+                String previousStageKey = snapshot.stages().get(i).stableKey();
+                solved.add(previousStageKey);
+                discovered.add(previousStageKey);
+            }
+            discovered.add(stageStableKey);
+            session.setSolvedStagesJson(writeKeys(solved));
+            session.setDiscoveredStagesJson(writeKeys(discovered));
+        } else {
+            for (int i = 0; i < stageIndex; i++) {
+                solved.add(snapshot.stages().get(i).stableKey());
+            }
+            session.setProgressIndex(stageIndex);
+            session.setSolvedStagesJson(writeKeys(solved));
+            session.setDiscoveredStagesJson(writeKeys(solved));
+        }
+        session.setActiveStageKey(stageStableKey);
+        return true;
+    }
+
     @Transactional(readOnly = true)
     public PlayView current(String slug, String deviceHash) {
         EscapeGame game = games.findBySlug(slug)

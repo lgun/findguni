@@ -9,6 +9,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,11 +27,14 @@ public class MakerController {
     private final AssetStorageService assets;
     private final AudioStorageService audioStorage;
     private final OpenverseAudioService openverseAudio;
+    private final PlayService plays;
+    private final AnonymousDeviceService devices;
 
     public MakerController(AccountService accounts, GameAuthoringService authoring,
                            PublishingService publishing, QRCodeService qrCodes, AssetStorageService assets,
                            QrPrintKitService qrPrintKits, AudioStorageService audioStorage,
-                           OpenverseAudioService openverseAudio) {
+                           OpenverseAudioService openverseAudio, PlayService plays,
+                           AnonymousDeviceService devices) {
         this.accounts = accounts;
         this.authoring = authoring;
         this.publishing = publishing;
@@ -38,6 +43,8 @@ public class MakerController {
         this.assets = assets;
         this.audioStorage = audioStorage;
         this.openverseAudio = openverseAudio;
+        this.plays = plays;
+        this.devices = devices;
     }
 
     @GetMapping
@@ -317,6 +324,7 @@ public class MakerController {
                               @RequestParam(name = "sfxVolume", required = false) Double sfxVolume,
                               @RequestParam(name = "removeSfx", required = false) List<String> removeSfxValues,
                               @RequestParam(name = "removeSceneImage", required = false) List<String> removeSceneImageValues,
+                              @RequestParam(defaultValue = "false") boolean preview,
                               RedirectAttributes redirect) {
         UserAccount maker = accounts.current(authentication);
         GameStage existing = gameId == null ? authoring.ownedStage(stageId, maker)
@@ -346,10 +354,33 @@ public class MakerController {
             if (gameId == null) authoring.updateStage(stageId, maker, draft, entryMode, nextStageKey);
             else authoring.updateStage(gameId, stageId, maker, draft, entryMode, nextStageKey);
             redirect.addFlashAttribute("success", "스테이지를 저장했습니다.");
+            if (preview) {
+                return "redirect:/maker/games/" + targetGameId + "/stages/" + stageId + "/preview";
+            }
         } catch (IllegalArgumentException | IllegalStateException e) {
             redirect.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/maker/games/" + targetGameId + "/edit?tab=stages&edit=" + stageId;
+    }
+
+    @GetMapping("/games/{gameId}/stages/{stageId}/preview")
+    public String previewStage(@PathVariable Long gameId, @PathVariable Long stageId,
+                               Authentication authentication, HttpServletRequest request,
+                               HttpServletResponse response, RedirectAttributes redirect) {
+        UserAccount maker = accounts.current(authentication);
+        GameStage stage = authoring.ownedStage(gameId, stageId, maker);
+        EscapeGame game = stage.getGame();
+        try {
+            String rawToken = devices.ensureToken(request, response);
+            if (!plays.openStagePreview(game.getSlug(), devices.hash(rawToken), stage.getStableKey())) {
+                redirect.addFlashAttribute("error", "미리볼 문제를 찾지 못했습니다.");
+                return "redirect:/maker/games/" + gameId + "/edit?tab=stages&edit=" + stageId;
+            }
+            return "redirect:/play/" + game.getSlug() + "/stage";
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            redirect.addFlashAttribute("error", "게임을 공개한 뒤 문제 미리보기를 사용할 수 있습니다.");
+            return "redirect:/maker/games/" + gameId + "/edit?tab=stages&edit=" + stageId;
+        }
     }
 
     @PostMapping({"/stages/{stageId}/delete", "/games/{gameId}/stages/{stageId}/delete"})
