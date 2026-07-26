@@ -72,9 +72,11 @@ public class PublishingService {
                         stage.getHint(),
                         stage.getPuzzleType(),
                         stage.getPuzzleType() != null && stage.getPuzzleType().requiresAnswer()
+                                && stage.getDraftAnswer() != null && !stage.getDraftAnswer().isBlank()
                                 ? answers.digest(stage.getPuzzleType(), stage.getDraftAnswer())
                                 : null,
                         parseOptions(stage.getOptionsText()),
+                        parseOptionRoutes(stage.getOptionRoutesJson()),
                         stage.getLockLength(),
                         stage.getRequiredItem(),
                         stage.getRequiredItems(),
@@ -173,12 +175,27 @@ public class PublishingService {
             }
         }
         for (GameStage stage : draftStages) {
-            if (stage.getPuzzleType().requiresAnswer() &&
+            List<String> stageOptions = parseOptions(stage.getOptionsText());
+            Map<String, String> optionRoutes = parseOptionRoutes(stage.getOptionRoutesJson());
+            boolean allOptionsRouted = stage.getPuzzleType() == PuzzleType.MULTIPLE_CHOICE
+                    && !stageOptions.isEmpty() && optionRoutes.keySet().containsAll(stageOptions);
+            if (stage.getPuzzleType().requiresAnswer() && !allOptionsRouted &&
                     (stage.getDraftAnswer() == null || answers.normalize(stage.getPuzzleType(), stage.getDraftAnswer()).isBlank())) {
                 throw new IllegalArgumentException("'" + stage.getTitle() + "' 스테이지의 정답을 입력해 주세요.");
             }
-            if (stage.getPuzzleType() == PuzzleType.MULTIPLE_CHOICE && parseOptions(stage.getOptionsText()).size() < 2) {
+            if (stage.getPuzzleType() == PuzzleType.MULTIPLE_CHOICE && stageOptions.size() < 2) {
                 throw new IllegalArgumentException("'" + stage.getTitle() + "' 객관식 선택지를 두 개 이상 입력해 주세요.");
+            }
+            for (Map.Entry<String, String> route : optionRoutes.entrySet()) {
+                if (!stageOptions.contains(route.getKey())) {
+                    throw new IllegalArgumentException("'" + stage.getTitle() + "'의 존재하지 않는 선택지에 이동 경로가 연결되어 있습니다.");
+                }
+                if (!stageKeys.contains(route.getValue())) {
+                    throw new IllegalArgumentException("'" + stage.getTitle() + "' 선택지의 이동 대상 문제가 존재하지 않습니다.");
+                }
+                if (Objects.equals(stage.getStableKey(), route.getValue())) {
+                    throw new IllegalArgumentException("'" + stage.getTitle() + "' 선택지를 자기 자신으로 연결할 수 없습니다.");
+                }
             }
             if (!itemKeys.containsAll(stage.getRequiredItems())) {
                 throw new IllegalArgumentException("'" + stage.getTitle() + "'의 필요 아이템이 존재하지 않습니다.");
@@ -224,6 +241,7 @@ public class PublishingService {
                 if (!discoveredStages.contains(stage.getStableKey()) || !hasRequirement(stage, availableItems)) continue;
                 grantReward(stage, availableItems);
                 if (stage.getNextStageKey() != null) discoveredStages.add(stage.getNextStageKey());
+                discoveredStages.addAll(parseOptionRoutes(stage.getOptionRoutesJson()).values());
                 iterator.remove();
                 progressed = true;
             }
@@ -258,6 +276,23 @@ public class PublishingService {
         String normalized = optionsText.replace("\r", "");
         String[] values = normalized.contains("\n") ? normalized.split("\n") : normalized.split(",");
         return Arrays.stream(values).map(String::trim).filter(value -> !value.isEmpty()).distinct().limit(20).toList();
+    }
+
+    private Map<String, String> parseOptionRoutes(String optionRoutesJson) {
+        if (optionRoutesJson == null || optionRoutesJson.isBlank()) return Map.of();
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(optionRoutesJson);
+            if (!root.isObject()) return Map.of();
+            LinkedHashMap<String, String> routes = new LinkedHashMap<>();
+            root.fields().forEachRemaining(entry -> {
+                String option = entry.getKey().trim();
+                String target = entry.getValue().asText("").trim();
+                if (!option.isEmpty() && !target.isEmpty()) routes.put(option, target);
+            });
+            return Map.copyOf(routes);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("객관식 선택지 이동 경로 형식이 올바르지 않습니다.", e);
+        }
     }
 
     private String toJson(ReleaseSnapshot snapshot) {

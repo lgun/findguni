@@ -469,6 +469,12 @@ public class GameAuthoringService {
     }
 
     @Transactional
+    public void updateStageOptionRoutes(Long gameId, Long stageId, UserAccount owner, String optionRoutesJson) {
+        GameStage stage = ownedStage(gameId, stageId, owner);
+        stage.setOptionRoutesJson(optionalOrNull(optionRoutesJson, 20_000));
+    }
+
+    @Transactional
     public EscapeGame platformToggle(Long gameId) {
         EscapeGame game = games.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));

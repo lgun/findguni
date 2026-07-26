@@ -192,6 +192,7 @@ button { color: inherit; }
 
 .form-grid { display: grid; gap: 1rem; }
 .form-grid--2 { grid-template-columns: 1fr; }
+[hidden] { display: none !important; }
 .field { display: flex; flex-direction: column; gap: .4rem; }
 .field__label { font-size: .88rem; font-weight: 800; }
 .field__hint { color: var(--muted); font-size: .78rem; }
@@ -292,6 +293,9 @@ button { color: inherit; }
 .field-error { display: block; margin-top: .3rem; color: var(--danger); font-size: .7rem; }
 .field-error[hidden] { display: none; }
 .input[aria-invalid="true"] { border-color: var(--danger); }
+.option-route-list { display: grid; gap: .55rem; margin-top: .35rem; }
+.option-route-row { display: grid; gap: .4rem; padding: .7rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--surface-2); }
+.option-route-row strong { overflow-wrap: anywhere; font-size: .82rem; }
 .maker-preview { min-width: 0; padding: .75rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); }
 .maker-preview__toolbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
 .maker-preview__toolbar strong, .maker-preview__toolbar small { display: block; }

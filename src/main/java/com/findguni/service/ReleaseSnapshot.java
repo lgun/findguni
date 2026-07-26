@@ -2,6 +2,7 @@ package com.findguni.service;
 
 import com.findguni.model.*;
 import java.util.List;
+import java.util.Map;
 
 public record ReleaseSnapshot(
         Long gameId,
@@ -80,6 +81,7 @@ public record ReleaseSnapshot(
             PuzzleType puzzleType,
             String answerDigest,
             List<String> options,
+            Map<String, String> optionRoutes,
             int lockLength,
             String requiredItem,
             List<String> requiredItems,
@@ -106,6 +108,7 @@ public record ReleaseSnapshot(
         public PuzzleType getPuzzleType() { return puzzleType; }
         public String getAnswerDigest() { return answerDigest; }
         public List<String> getOptions() { return options; }
+        public Map<String, String> getOptionRoutes() { return optionRoutes == null ? Map.of() : optionRoutes; }
         public int getLockLength() { return lockLength; }
         public String getRequiredItem() { return requiredItem; }
         public List<String> getRequiredItems() {

@@ -288,11 +288,69 @@
                 var type = select.value;
                 form.querySelectorAll('[data-types]').forEach(function (group) {
                     var types = group.dataset.types.split(',');
-                    group.hidden = types.indexOf(type) === -1;
+                    var visible = types.indexOf(type) !== -1;
+                    group.hidden = !visible;
+                    group.querySelectorAll('input,select,textarea,button').forEach(function (control) {
+                        control.disabled = !visible;
+                    });
                 });
             }
             select.addEventListener('change', update);
             update();
+        });
+    }
+
+    function initOptionRouting() {
+        document.querySelectorAll('[data-option-routing]').forEach(function (editor) {
+            var source = editor.querySelector('[data-option-source]');
+            var routesInput = editor.querySelector('[data-option-routes]');
+            var list = editor.querySelector('[data-option-route-list]');
+            var template = editor.querySelector('[data-option-route-template]');
+            if (!source || !routesInput || !list || !template) return;
+            var routes = {};
+            try { routes = JSON.parse(routesInput.value || '{}') || {}; }
+            catch (error) { routes = {}; }
+
+            function options() {
+                var seen = {};
+                return source.value.replace(/\r/g, '').split(/\n|,/).map(function (value) {
+                    return value.trim();
+                }).filter(function (value) {
+                    if (!value || seen[value]) return false;
+                    seen[value] = true;
+                    return true;
+                }).slice(0, 20);
+            }
+
+            function sync() {
+                var nextRoutes = {};
+                list.querySelectorAll('[data-option-route-select]').forEach(function (select) {
+                    if (select.value) nextRoutes[select.dataset.option] = select.value;
+                });
+                routes = nextRoutes;
+                routesInput.value = JSON.stringify(routes);
+            }
+
+            function render() {
+                list.querySelectorAll('[data-option-route-select]').forEach(function (select) {
+                    if (select.value) routes[select.dataset.option] = select.value;
+                });
+                list.replaceChildren();
+                options().forEach(function (option) {
+                    var row = template.content.firstElementChild.cloneNode(true);
+                    var label = row.querySelector('[data-option-route-label]');
+                    var select = row.querySelector('[data-option-route-select]');
+                    label.textContent = '"' + option + '" 선택 시';
+                    select.dataset.option = option;
+                    select.value = routes[option] || '';
+                    select.addEventListener('change', sync);
+                    list.appendChild(row);
+                });
+                sync();
+            }
+
+            source.addEventListener('input', render);
+            render();
         });
     }
 
@@ -727,6 +785,7 @@
         initCoverPreview();
         initCopyButtons();
         initTypeFields();
+        initOptionRouting();
         initCounters();
         initTemplateFilters();
         initEmojiPickers();

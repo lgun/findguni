@@ -54,6 +54,10 @@ public class GameStage {
     @Column(name = "options_text", columnDefinition = "LONGTEXT")
     private String optionsText;
 
+    @Lob
+    @Column(name = "option_routes_json", columnDefinition = "LONGTEXT")
+    private String optionRoutesJson;
+
     @Column(name = "lock_length", nullable = false)
     private int lockLength = 4;
 
@@ -151,6 +155,8 @@ public class GameStage {
     public void setDraftAnswer(String draftAnswer) { this.draftAnswer = draftAnswer; }
     public String getOptionsText() { return optionsText; }
     public void setOptionsText(String optionsText) { this.optionsText = optionsText; }
+    public String getOptionRoutesJson() { return optionRoutesJson; }
+    public void setOptionRoutesJson(String optionRoutesJson) { this.optionRoutesJson = optionRoutesJson; }
     public int getLockLength() { return lockLength; }
     public void setLockLength(int lockLength) { this.lockLength = lockLength; }
     public String getRequiredItem() { return requiredItem; }

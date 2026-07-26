@@ -172,6 +172,7 @@ public class PlayService {
             return new SolveResult(false, false, "Required items are missing for this stage.");
         }
         boolean success = !stage.puzzleType().requiresAnswer()
+                || hasOptionRoute(stage, submittedAnswer)
                 || answers.matches(stage.puzzleType(), submittedAnswer, stage.answerDigest());
         attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, success));
         if (!success) {
@@ -179,7 +180,21 @@ public class PlayService {
             return new SolveResult(false, false, "Wrong answer. Try again.");
         }
         applyItemExchange(session, stage, inventory);
-        session.advance();
+        String selectedRoute = optionRoute(stage, submittedAnswer);
+        int routeIndex = stageIndex(snapshot, selectedRoute);
+        if (routeIndex >= 0) {
+            LinkedHashSet<String> routedSolved = new LinkedHashSet<>();
+            for (int i = 0; i < routeIndex; i++) {
+                routedSolved.add(snapshot.stages().get(i).stableKey());
+            }
+            session.recordSuccessfulAttempt();
+            session.setSolvedStagesJson(writeKeys(routedSolved));
+            session.setDiscoveredStagesJson(writeKeys(routedSolved));
+            session.setProgressIndex(routeIndex);
+            session.setActiveStageKey(selectedRoute);
+        } else {
+            session.advance();
+        }
         boolean completed = session.getProgressIndex() >= snapshot.stages().size();
         if (completed) session.complete();
         return new SolveResult(true, completed, null);
@@ -354,6 +369,25 @@ public class PlayService {
                 minutes, session.getStartedAt(), session.getCompletedAt());
     }
 
+    private boolean hasOptionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer) {
+        return optionRoute(stage, submittedAnswer) != null;
+    }
+
+    private String optionRoute(ReleaseSnapshot.StageSnapshot stage, String submittedAnswer) {
+        if (stage == null || stage.puzzleType() != PuzzleType.MULTIPLE_CHOICE || stage.getOptionRoutes().isEmpty()) {
+            return null;
+        }
+        return stage.getOptionRoutes().get(Objects.toString(submittedAnswer, "").trim());
+    }
+
+    private int stageIndex(ReleaseSnapshot snapshot, String stableKey) {
+        if (stableKey == null) return -1;
+        for (int i = 0; i < snapshot.stages().size(); i++) {
+            if (Objects.equals(snapshot.stages().get(i).stableKey(), stableKey)) return i;
+        }
+        return -1;
+    }
+
     private SolveResult solveExploration(PlaySession session, ReleaseSnapshot snapshot, String submittedAnswer) {
         ReleaseSnapshot.StageSnapshot stage = snapshot.stages().stream()
                 .filter(candidate -> Objects.equals(candidate.stableKey(), session.getActiveStageKey()))
@@ -379,6 +413,7 @@ public class PlayService {
             return new SolveResult(false, false, "Missing required items.");
         }
         boolean success = !stage.puzzleType().requiresAnswer()
+                || hasOptionRoute(stage, submittedAnswer)
                 || answers.matches(stage.puzzleType(), submittedAnswer, stage.answerDigest());
         attempts.save(new PlayAttempt(session, stage.stableKey(), AttemptKind.SOLVE, success));
         if (!success) {
@@ -388,9 +423,12 @@ public class PlayService {
         applyItemExchange(session, stage, inventory);
         session.recordSuccessfulAttempt();
         solved.add(stage.stableKey());
+        String selectedRoute = optionRoute(stage, submittedAnswer);
+        if (selectedRoute != null) solved.remove(selectedRoute);
         session.setSolvedStagesJson(writeKeys(solved));
         ReleaseSnapshot.StageSnapshot nextStage = snapshot.stages().stream()
-                .filter(candidate -> Objects.equals(candidate.stableKey(), stage.nextStageKey()))
+                .filter(candidate -> Objects.equals(candidate.stableKey(),
+                        selectedRoute == null ? stage.nextStageKey() : selectedRoute))
                 .filter(candidate -> !solved.contains(candidate.stableKey()))
                 .findFirst().orElse(null);
         if (nextStage != null) {

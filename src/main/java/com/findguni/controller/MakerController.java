@@ -249,6 +249,7 @@ public class MakerController {
                            @RequestParam(defaultValue = "STORY") PuzzleType puzzleType,
                            @RequestParam(defaultValue = "") String draftAnswer,
                            @RequestParam(defaultValue = "") String optionsText,
+                           @RequestParam(defaultValue = "{}") String optionRoutesJson,
                            @RequestParam(defaultValue = "4") int lockLength,
                            @RequestParam(defaultValue = "") String requiredItemId,
                            @RequestParam(name = "requiredItemIds", required = false) List<String> requiredItemIds,
@@ -288,6 +289,7 @@ public class MakerController {
                     removeSfx ? "" : sfxSourceUrl, sfxVolume == null ? 0.8 : sfxVolume,
                     requiredItemIds, anyTrue(consumeRequiredItemValues, false)),
                     entryMode, nextStageKey);
+            authoring.updateStageOptionRoutes(id, created.getId(), maker, optionRoutesJson);
             redirect.addFlashAttribute("success", "스테이지를 추가했습니다.");
             return "redirect:/maker/games/" + id + "/edit?tab=stages&edit=" + created.getId();
         } catch (IllegalArgumentException | IllegalStateException e) { redirect.addFlashAttribute("error", e.getMessage()); }
@@ -303,6 +305,7 @@ public class MakerController {
                               @RequestParam(defaultValue = "STORY") PuzzleType puzzleType,
                               @RequestParam(defaultValue = "") String draftAnswer,
                               @RequestParam(defaultValue = "") String optionsText,
+                              @RequestParam(defaultValue = "{}") String optionRoutesJson,
                               @RequestParam(defaultValue = "4") int lockLength,
                                @RequestParam(defaultValue = "") String requiredItemId,
                                @RequestParam(name = "requiredItemIds", required = false) List<String> requiredItemIds,
@@ -353,6 +356,7 @@ public class MakerController {
                     requiredItemIds, anyTrueOrExisting(consumeRequiredItemValues, existing.isConsumeRequiredItems()));
             if (gameId == null) authoring.updateStage(stageId, maker, draft, entryMode, nextStageKey);
             else authoring.updateStage(gameId, stageId, maker, draft, entryMode, nextStageKey);
+            authoring.updateStageOptionRoutes(targetGameId, stageId, maker, optionRoutesJson);
             redirect.addFlashAttribute("success", "스테이지를 저장했습니다.");
             if (preview) {
                 return "redirect:/maker/games/" + targetGameId + "/stages/" + stageId + "/preview";
